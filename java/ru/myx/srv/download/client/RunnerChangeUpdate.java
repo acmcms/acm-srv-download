@@ -60,7 +60,7 @@ final class RunnerChangeUpdate implements Runnable, Runner {
 					final List<Object> result = new ArrayList<>();
 					do {
 						result.add(rs.getString(1));
-						result.add(new Integer(rs.getInt(2)));
+						result.add(Integer.valueOf(rs.getInt(2)));
 					} while (rs.next());
 					return result;
 				}
@@ -204,7 +204,7 @@ final class RunnerChangeUpdate implements Runnable, Runner {
 					if (rs.next()) {
 						result = new ArrayList<>();
 						do {
-							result.add(new Integer(rs.getInt(1)));
+							result.add(Integer.valueOf(rs.getInt(1)));
 						} while (rs.next());
 					} else {
 						return;
@@ -321,7 +321,7 @@ final class RunnerChangeUpdate implements Runnable, Runner {
 			try (final ResultSet rs = ps.executeQuery()) {
 				while (rs.next()) {
 					linkData.add(rs.getString(1));
-					linkData.add(new Integer(rs.getInt(2)));
+					linkData.add(Integer.valueOf(rs.getInt(2)));
 				}
 			}
 		}
@@ -355,7 +355,7 @@ final class RunnerChangeUpdate implements Runnable, Runner {
 			ps.setMaxRows(RunnerChangeUpdate.LIMIT_BULK_UPGRADE);
 			try (final ResultSet rs = ps.executeQuery()) {
 				while (rs.next()) {
-					toUpgrade.add(new EntrySimple<>(rs.getString(1), new Integer(rs.getInt(2))));
+					toUpgrade.add(new EntrySimple<>(rs.getString(1), Integer.valueOf(rs.getInt(2))));
 				}
 			}
 		}
@@ -467,7 +467,7 @@ final class RunnerChangeUpdate implements Runnable, Runner {
 									task.put("evtId", rs.getString(1));
 									task.put("evtCmdType", rs.getString(2));
 									task.put("evtCmdGuid", rs.getString(3));
-									task.put("evtCmdLuid", new Integer(rs.getInt(4)));
+									task.put("evtCmdLuid", Integer.valueOf(rs.getInt(4)));
 									tasks.add(task);
 								} while (rs.next());
 							} else {

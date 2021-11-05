@@ -11,9 +11,9 @@ import ru.myx.ae3.Engine;
 import ru.myx.ae3.answer.Reply;
 import ru.myx.ae3.answer.ReplyAnswer;
 import ru.myx.ae3.base.Base;
-import ru.myx.ae3.help.Base64;
 import ru.myx.ae3.help.Convert;
 import ru.myx.ae3.serve.ServeRequest;
+import ru.myx.util.Base64;
 
 /**
  * @author myx

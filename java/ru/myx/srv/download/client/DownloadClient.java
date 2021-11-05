@@ -115,7 +115,7 @@ public class DownloadClient extends AbstractPluginInstance {
 	
 	private RunnerDatabaseRequestor searchLoader;
 	
-	private final Function<String, RecFile> sourceRecFile = new Function<String, RecFile>() {
+	private final Function<String, RecFile> sourceRecFile = new Function<>() {
 
 		@Override
 		public RecFile apply(String key) {
@@ -206,11 +206,11 @@ public class DownloadClient extends AbstractPluginInstance {
 				}
 				synchronized (this.availableBuffer) {
 					if (availabilityCalculated) {
-						if (this.availableBuffer.add(new Integer(source.getLuid()))) {
+						if (this.availableBuffer.add(Integer.valueOf(source.getLuid()))) {
 							this.available = Create.tempSet(this.availableBuffer);
 						}
 					} else {
-						if (this.availableBuffer.remove(new Integer(source.getLuid()))) {
+						if (this.availableBuffer.remove(Integer.valueOf(source.getLuid()))) {
 							this.available = Create.tempSet(this.availableBuffer);
 						}
 					}
@@ -234,11 +234,11 @@ public class DownloadClient extends AbstractPluginInstance {
 		}
 		synchronized (this.availableBuffer) {
 			if (availability) {
-				if (this.availableBuffer.add(new Integer(source.getLuid()))) {
+				if (this.availableBuffer.add(Integer.valueOf(source.getLuid()))) {
 					this.available = Create.tempSet(this.availableBuffer);
 				}
 			} else {
-				if (this.availableBuffer.remove(new Integer(source.getLuid()))) {
+				if (this.availableBuffer.remove(Integer.valueOf(source.getLuid()))) {
 					this.available = Create.tempSet(this.availableBuffer);
 				}
 			}
