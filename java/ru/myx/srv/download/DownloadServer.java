@@ -6,6 +6,7 @@
 package ru.myx.srv.download;
 
 import java.io.File;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -49,7 +50,7 @@ public class DownloadServer extends AbstractServer {
 				.setContentType("text/xml")//
 				.setNoCaching()//
 				.setPrivate()//
-				.setEncoding(Engine.CHARSET_UTF8)//
+				.setEncoding(StandardCharsets.UTF_8)//
 				.setFinal();
 	}
 	
@@ -61,7 +62,7 @@ public class DownloadServer extends AbstractServer {
 			? url
 			: url.substring(0, pos);
 		final String target = identifier.substring(0, identifier.length() - "/@play.asx".length());
-		final String content = new StringBuilder().append("<ASX Version=\"3.0\">").append("<ENTRY>").append("<REF HREF=\"").append(Text.encodeUri(target, Engine.CHARSET_UTF8))
+		final String content = new StringBuilder().append("<ASX Version=\"3.0\">").append("<ENTRY>").append("<REF HREF=\"").append(Text.encodeUri(target, StandardCharsets.UTF_8))
 				.append("\"/>").append("</ENTRY>").append("</ASX>").toString();
 		return Reply.binary("DLSRV", request, Transfer.createBuffer(content.getBytes()), "play.asx").setPrivate().setFinal();
 	}
@@ -74,7 +75,7 @@ public class DownloadServer extends AbstractServer {
 			? url
 			: url.substring(0, pos);
 		final String target = identifier.substring(0, identifier.length() - "/@play.m3u".length());
-		final String content = "#EXTM3U\r\n" + Text.encodeUri(target, Engine.CHARSET_UTF8);
+		final String content = "#EXTM3U\r\n" + Text.encodeUri(target, StandardCharsets.UTF_8);
 		return Reply.binary("DLSRV", request, Transfer.createBuffer(content.getBytes()), "play.m3u").setPrivate().setFinal();
 	}
 	
@@ -86,7 +87,7 @@ public class DownloadServer extends AbstractServer {
 			? url
 			: url.substring(0, pos);
 		final String target = identifier.substring(0, identifier.length() - "/@play.pls".length());
-		final String content = "[playlist]\r\nNumberOfEntries=1\r\nVersion=2\r\nFile1=" + Text.encodeUri(target, Engine.CHARSET_UTF8);
+		final String content = "[playlist]\r\nNumberOfEntries=1\r\nVersion=2\r\nFile1=" + Text.encodeUri(target, StandardCharsets.UTF_8);
 		return Reply.binary("DLSRV", request, Transfer.createBuffer(content.getBytes()), "play.pls").setPrivate().setFinal();
 	}
 	
@@ -98,7 +99,7 @@ public class DownloadServer extends AbstractServer {
 			? url
 			: url.substring(0, pos);
 		final String target = identifier.substring(0, identifier.length() - "/@preview.asx".length()) + "/@preview.audio";
-		final String content = new StringBuilder().append("<ASX Version=\"3.0\">").append("<ENTRY>").append("<REF HREF=\"").append(Text.encodeUri(target, Engine.CHARSET_UTF8))
+		final String content = new StringBuilder().append("<ASX Version=\"3.0\">").append("<ENTRY>").append("<REF HREF=\"").append(Text.encodeUri(target, StandardCharsets.UTF_8))
 				.append("\"/>").append("</ENTRY>").append("</ASX>").toString();
 		return Reply.binary("DLSRV", request, Transfer.createBuffer(content.getBytes()), "preview.asx").setPrivate().setFinal();
 	}
@@ -111,7 +112,7 @@ public class DownloadServer extends AbstractServer {
 			? url
 			: url.substring(0, pos);
 		final String target = identifier.substring(0, identifier.length() - "/@preview.m3u".length()) + "/@preview.audio";
-		final String content = "#EXTM3U\r\n" + Text.encodeUri(target, Engine.CHARSET_UTF8);
+		final String content = "#EXTM3U\r\n" + Text.encodeUri(target, StandardCharsets.UTF_8);
 		return Reply.binary("DLSRV", request, Transfer.createBuffer(content.getBytes()), "preview.m3u").setPrivate().setFinal();
 	}
 	
@@ -123,7 +124,7 @@ public class DownloadServer extends AbstractServer {
 			? url
 			: url.substring(0, pos);
 		final String target = identifier.substring(0, identifier.length() - "/@preview.pls".length()) + "/@preview.audio";
-		final String content = "[playlist]\r\nNumberOfEntries=1\r\nVersion=2\r\nFile1=" + Text.encodeUri(target, Engine.CHARSET_UTF8);
+		final String content = "[playlist]\r\nNumberOfEntries=1\r\nVersion=2\r\nFile1=" + Text.encodeUri(target, StandardCharsets.UTF_8);
 		return Reply.binary("DLSRV", request, Transfer.createBuffer(content.getBytes()), "preview.pls").setPrivate().setFinal();
 	}
 	
@@ -816,7 +817,7 @@ public class DownloadServer extends AbstractServer {
 			}
 		}
 		html.append("</body></html>");
-		return Reply.string("DLSRV", request, html.toString()).setContentType("text/html").setNoCaching().setPrivate().setEncoding(Engine.CHARSET_UTF8).setFinal();
+		return Reply.string("DLSRV", request, html.toString()).setContentType("text/html").setNoCaching().setPrivate().setEncoding(StandardCharsets.UTF_8).setFinal();
 	}
 	
 	private ReplyAnswer respondLoad(final ServeRequest request) {

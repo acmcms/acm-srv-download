@@ -5,9 +5,9 @@
  */
 package ru.myx.srv.download;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
-import ru.myx.ae3.Engine;
 import ru.myx.ae3.answer.Reply;
 import ru.myx.ae3.answer.ReplyAnswer;
 import ru.myx.ae3.base.Base;
@@ -58,7 +58,7 @@ class CheckRefFixed implements CheckRef {
 			if (bytes == null || bytes.length == 0) {
 				return false;
 			}
-			auth = new String( bytes, Engine.CHARSET_UTF8 );
+			auth = new String( bytes, StandardCharsets.UTF_8 );
 		}
 		final int pos = auth.indexOf( ':' );
 		if (pos == -1) {

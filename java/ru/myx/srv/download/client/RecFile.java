@@ -5,6 +5,7 @@
  */
 package ru.myx.srv.download.client;
 
+import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -276,7 +277,7 @@ public class RecFile {
 			if (description.length == 0) {
 				this.description = RecFile.NULL_DESCRIPTION;
 			} else {
-				this.description = new String( description, Engine.CHARSET_UTF8 );
+				this.description = new String( description, StandardCharsets.UTF_8 );
 			}
 		}
 	}
@@ -387,7 +388,7 @@ public class RecFile {
 								if (bytes == null || bytes.length == 0) {
 									this.description = RecFile.NULL_DESCRIPTION;
 								} else {
-									this.description = new String( bytes, Engine.CHARSET_UTF8 );
+									this.description = new String( bytes, StandardCharsets.UTF_8 );
 								}
 								if (this.hidden == -1) {
 									this.hidden = "Y".equals( rs.getString( 2 ) )

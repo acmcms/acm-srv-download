@@ -14,6 +14,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -301,7 +302,7 @@ class Share {
 		if (index.exists()) {
 			BaseObject xmlData;
 			try {
-				xmlData = Xml.toBase("getFolders", Transfer.createCopier(index), Engine.CHARSET_UTF8, null, null, null);
+				xmlData = Xml.toBase("getFolders", Transfer.createCopier(index), StandardCharsets.UTF_8, null, null, null);
 				if (checked.lastModified() + 5 * 1000L * 60L > Engine.fastTime()) {
 					result.baseDefineImportAllEnumerable(xmlData);
 					return result;
@@ -427,7 +428,7 @@ class Share {
 			indexData.baseDelete("file");
 		}
 		try (final FileOutputStream indexFile = new FileOutputStream(index)) {
-			indexFile.write(Xml.toXmlString("index", indexData, false).getBytes(Engine.CHARSET_UTF8));
+			indexFile.write(Xml.toXmlString("index", indexData, false).getBytes(StandardCharsets.UTF_8));
 		}
 		if (!checked.exists()) {
 			checked.createNewFile();

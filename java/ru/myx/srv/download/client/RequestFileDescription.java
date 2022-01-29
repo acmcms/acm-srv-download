@@ -3,12 +3,12 @@
  */
 package ru.myx.srv.download.client;
 
+import java.nio.charset.StandardCharsets;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Map;
 
-import ru.myx.ae3.Engine;
 import ru.myx.jdbc.queueing.RequestAttachment;
 import ru.myx.jdbc.queueing.RunnerDatabaseRequestor;
 import ru.myx.util.EntrySimple;
@@ -40,7 +40,7 @@ final class RequestFileDescription extends RequestAttachment<Map.Entry<Boolean, 
 					if (bytes == null || bytes.length == 0) {
 						description = null;
 					} else {
-						description = new String(bytes, Engine.CHARSET_UTF8);
+						description = new String(bytes, StandardCharsets.UTF_8);
 					}
 					hidden = "Y".equals(rs.getString(2))
 						? Boolean.TRUE

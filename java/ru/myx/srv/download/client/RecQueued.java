@@ -3,6 +3,7 @@
  */
 package ru.myx.srv.download.client;
 
+import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -35,7 +36,7 @@ public final class RecQueued {
 		this.formation = formation;
 		this.text = text == null || text.length == 0
 				? ""
-				: Transfer.createBuffer( text ).toString( Engine.CHARSET_UTF8 );
+				: Transfer.createBuffer( text ).toString( StandardCharsets.UTF_8 );
 		this.hint = hint == null || "*".equals( hint )
 				? null
 				: hint;

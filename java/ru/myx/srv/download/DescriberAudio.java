@@ -11,6 +11,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.Map;
 
@@ -108,7 +109,7 @@ class DescriberAudio implements Describer {
 					Transfer.toStream(stderr, error.getOutputStream(), true);
 					final TransferBuffer errorBuffer = error.toBuffer();
 					if (errorBuffer.hasRemaining()) {
-						Report.warning("DLSRV", "While building unix preview: \nLine: " + line + "\n" + errorBuffer.toString(Engine.CHARSET_UTF8));
+						Report.warning("DLSRV", "While building unix preview: \nLine: " + line + "\n" + errorBuffer.toString(StandardCharsets.UTF_8));
 					} else {
 						Report.info("DLSRV", "Lame finished: " + source);
 					}

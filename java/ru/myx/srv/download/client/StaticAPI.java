@@ -5,6 +5,7 @@
  */
 package ru.myx.srv.download.client;
 
+import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -107,14 +108,14 @@ public class StaticAPI {
 										* 24L
 										* 7L
 										* 58 ) );
-								ps.setBytes( 4, "".getBytes( Engine.CHARSET_UTF8 ) );
+								ps.setBytes( 4, "".getBytes( StandardCharsets.UTF_8 ) );
 								ps.setString( 5, "divided" );
 								ps.execute();
 							}
 						} else {
 							try (final PreparedStatement ps = conn
 									.prepareStatement( "UPDATE d1Queue SET queText=?, queQueued=? WHERE queFormation=?" )) {
-								ps.setBytes( 1, "".getBytes( Engine.CHARSET_UTF8 ) );
+								ps.setBytes( 1, "".getBytes( StandardCharsets.UTF_8 ) );
 								ps.setTimestamp( 2, new Timestamp( Engine.fastTime()
 										- 1000L
 										* 60L
@@ -702,7 +703,7 @@ public class StaticAPI {
 				try (final PreparedStatement ps = conn
 						.prepareStatement( "INSERT INTO d1Descriptions(itmCrc,itmDescription,itmHidden) VALUES (?,?,?)" )) {
 					ps.setString( 1, md5 );
-					ps.setBytes( 2, realDescription.getBytes( Engine.CHARSET_UTF8 ) );
+					ps.setBytes( 2, realDescription.getBytes( StandardCharsets.UTF_8 ) );
 					ps.setString( 3, hidden
 							? "Y"
 							: "N" );
@@ -744,14 +745,14 @@ public class StaticAPI {
 					ps.setString( 1, name.toLowerCase() );
 					ps.setTimestamp( 2, new Timestamp( 0L ) );
 					ps.setTimestamp( 3, new Timestamp( Engine.fastTime() - 1000L * 60L * 60L * 24L * 7L * 58 ) );
-					ps.setBytes( 4, text.getBytes( Engine.CHARSET_UTF8 ) );
+					ps.setBytes( 4, text.getBytes( StandardCharsets.UTF_8 ) );
 					ps.setString( 5, "setQueue( text )" );
 					ps.execute();
 				}
 			} else {
 				try (final PreparedStatement ps = conn
 						.prepareStatement( "UPDATE d1Queue SET queText=?, queQueued=? WHERE queFormation=?" )) {
-					ps.setBytes( 1, text.getBytes( Engine.CHARSET_UTF8 ) );
+					ps.setBytes( 1, text.getBytes( StandardCharsets.UTF_8 ) );
 					ps.setTimestamp( 2, new Timestamp( Engine.fastTime() - 1000L * 60L * 60L * 24L * 7L * 58 ) );
 					ps.setString( 3, name.toLowerCase() );
 					ps.execute();
