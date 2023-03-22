@@ -20,6 +20,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.TreeSet;
+import java.util.function.Function;
 
 import ru.myx.ae1.AbstractPluginInstance;
 import ru.myx.ae1.provide.ProvideStatus;
@@ -33,7 +34,6 @@ import ru.myx.ae2.indexing.IndexingFinder;
 import ru.myx.ae2.indexing.IndexingStemmer;
 import ru.myx.ae3.Engine;
 import ru.myx.ae3.act.Act;
-import java.util.function.Function;
 import ru.myx.ae3.base.Base;
 import ru.myx.ae3.base.BaseObject;
 import ru.myx.ae3.cache.Cache;
@@ -56,26 +56,26 @@ import ru.myx.srv.download.client.ctrl.Node;
 
 /** @author myx */
 public class DownloadClient extends AbstractPluginInstance {
-	
+
 	private static final RecKnown[] EMPTY_KNOWN_ARRAY = new RecKnown[0];
-	
+
 	private static final RecFileGroup[] EMPTY_GROUP_ARRAY = new RecFileGroup[0];
-	
+
 	private static final RecFile[] EMPTY_FILE_ARRAY = new RecFile[0];
-	
+
 	private static final Map<String, String> REPLACEMENT_SEARCH_SORT = DownloadClient.createSearchReplacementSort();
-	
+
 	private static final Map<String, String> createSearchReplacementSort() {
-		
+
 		final Map<String, String> result = new HashMap<>();
 		result.put("alphabet", "$title");
 		result.put("history", "$created-");
 		result.put("log", "$created");
 		return result;
 	}
-	
+
 	private static final String joinSqlString(final Collection<?> strs, final String token) {
-		
+
 		final StringBuilder result = new StringBuilder(128);
 		for (final Object object : strs) {
 			if (result.length() > 0) {
@@ -92,58 +92,58 @@ public class DownloadClient extends AbstractPluginInstance {
 		}
 		return result.toString();
 	}
-	
+
 	private String identity;
-	
+
 	private File cacheRoot;
-	
+
 	private String connection;
-	
+
 	private Enumeration<Connection> connectionSource;
-	
+
 	private final CreatorFolder creatorFolder = new CreatorFolder(this);
-	
+
 	private final CacheL2<RecFolder> cacheFolders = Cache.createL2("folders", CacheType.NORMAL_JAVA_SOFT);
-	
+
 	private final CreatorSource creatorSource = new CreatorSource(this);
-	
+
 	private final CacheL2<RecSource> cacheSources = Cache.createL2("sources", CacheType.NORMAL_JAVA_SOFT);
-	
+
 	private final CacheL2<RecFileGroup[]> cacheFileGroups = Cache.createL2("data", CacheType.NORMAL_JAVA_SOFT);
-	
+
 	private final CacheL2<RecKnown> cacheKnown = Cache.createL2("known", CacheType.NORMAL_JAVA_SOFT);
-	
+
 	private RunnerDatabaseRequestor searchLoader;
-	
+
 	private final Function<String, RecFile> sourceRecFile = new Function<>() {
-
+		
 		@Override
-		public RecFile apply(String key) {
-
+		public RecFile apply(final String key) {
+			
 			return DownloadClient.this.searchByGuid(key);
 		}
 	};
-	
+
 	private boolean client;
-	
+
 	private TaskInterest taskInterest = null;
-	
+
 	private LockManager lockManager;
-	
+
 	private CacheL2<int[]> cacheDictionary;
-	
+
 	private IndexingDictionaryCached indexingDictionary;
-	
+
 	private Indexing currentIndexing;
-	
+
 	private IndexingFinder currentFinder;
-	
+
 	private final Map<String, Interest> interests = new HashMap<>();
-	
+
 	private final TreeSet<Integer> availableBuffer = new TreeSet<>();
-	
+
 	Set<Integer> available = Create.tempSet();
-	
+
 	/** @param guid
 	 * @param srcHost
 	 * @param srcPort
@@ -154,7 +154,7 @@ public class DownloadClient extends AbstractPluginInstance {
 	 * @throws SQLException */
 	public void addSource(final String guid, final String srcHost, final int srcPort, final String idxHost, final int idxPort, final boolean index, final boolean active)
 			throws SQLException {
-		
+
 		try (final Connection conn = this.nextConnection()) {
 			try (final PreparedStatement ps = conn.prepareStatement(
 					"INSERT INTO d1Sources(srcGuid,srcHost,srcPort,idxHost,idxPort,srcCreated,srcMaintainer,srcChecked,srcIndex,srcActive,srcReady,srcHealth) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)")) {
@@ -166,21 +166,25 @@ public class DownloadClient extends AbstractPluginInstance {
 				ps.setTimestamp(6, new Timestamp(Engine.fastTime()));
 				ps.setString(7, "*");
 				ps.setTimestamp(8, new Timestamp(0L));
-				ps.setString(9, index
-					? "Y"
-					: "N");
-				ps.setString(10, active
-					? "Y"
-					: "N");
+				ps.setString(
+						9,
+						index
+							? "Y"
+							: "N");
+				ps.setString(
+						10,
+						active
+							? "Y"
+							: "N");
 				ps.setInt(11, 0);
 				ps.setInt(12, 0);
 				ps.execute();
 			}
 		}
 	}
-	
+
 	void avaibility(final RecSource source, final boolean availability) {
-		
+
 		if (source.isActive()) {
 			final boolean availabilityCalculated;
 			try (final Connection conn = this.nextConnection()) {
@@ -222,9 +226,11 @@ public class DownloadClient extends AbstractPluginInstance {
 					ps.setString(3, this.identity);
 					ps.setInt(4, (int) (source.getHealth() * 100));
 					ps.setInt(5, (int) (source.getReady() * 100));
-					ps.setString(6, availability
-						? "Y"
-						: "N");
+					ps.setString(
+							6,
+							availability
+								? "Y"
+								: "N");
 					ps.execute();
 				}
 				return;
@@ -244,12 +250,12 @@ public class DownloadClient extends AbstractPluginInstance {
 			}
 		}
 	}
-	
+
 	/** @param source
 	 * @param fix
 	 * @return boolean */
 	public boolean checkSource(final RecSource source, final boolean fix) {
-		
+
 		if (source.check()) {
 			try (final Connection conn = this.nextConnection()) {
 				if (conn == null) {
@@ -319,10 +325,10 @@ public class DownloadClient extends AbstractPluginInstance {
 		Report.info("DL_CLIENT", "Lost source connection: " + source);
 		return false;
 	}
-	
+
 	@Override
 	public void destroy() {
-		
+
 		if (this.searchLoader != null) {
 			this.searchLoader.stop();
 			this.searchLoader = null;
@@ -333,61 +339,61 @@ public class DownloadClient extends AbstractPluginInstance {
 		}
 		this.taskInterest.stop();
 	}
-	
+
 	RecFolder getFolder(final int luid) {
-		
+
 		final String key = String.valueOf(luid);
 		return this.cacheFolders.get(key, "", this.searchLoader, key, this.creatorFolder);
 	}
-	
+
 	/** @return string */
 	public String getIdentity() {
-		
+
 		return this.identity;
 	}
-	
+
 	/** @param alias
 	 * @return known array */
 	public RecKnown[] getKnownByAlias(final String alias) {
-		
+
 		final RequestKnownByAlias request = new RequestKnownByAlias(this, alias);
 		this.searchLoader.add(request);
 		return request.baseValue();
 	}
-	
+
 	/** @param followLink
 	 * @return known */
 	public RecKnown getKnownByFollowLink(final String followLink) {
-		
-		if (followLink == null || followLink.trim().length() == 0) {
+
+		if (followLink == null || followLink.isBlank()) {
 			return null;
 		}
 		final RequestKnownByFollowLink request = new RequestKnownByFollowLink(this, followLink);
 		this.searchLoader.add(request);
 		return request.baseValue();
 	}
-	
+
 	RunnerDatabaseRequestor getLoader() {
-		
+
 		return this.searchLoader;
 	}
-	
+
 	@SuppressWarnings("static-method")
 	String getMnemonicName() {
-		
+
 		return "Download";
 	}
-	
+
 	RecSource getSource(final int luid) {
-		
+
 		final String key = String.valueOf(luid);
 		return this.cacheSources.get(key, "", this.searchLoader, key, this.creatorSource);
 	}
-	
+
 	/** @param key
 	 * @return source */
 	public RecSource getSource(final String key) {
-		
+
 		final RecSource[] sources = this.getSources(true);
 		for (final RecSource source : sources) {
 			if (source.getGuid().equals(key)) {
@@ -396,11 +402,11 @@ public class DownloadClient extends AbstractPluginInstance {
 		}
 		return null;
 	}
-	
+
 	/** @param guid
 	 * @return int */
 	public final int getSourceFileCount(final String guid) {
-		
+
 		try (final Connection conn = this.nextConnection()) {
 			try (final PreparedStatement ps = conn.prepareStatement(
 					"SELECT count(*) FROM d1Items i INNER JOIN d1Folders f ON i.fldLuid=f.fldLuid INNER JOIN d1Sources s ON f.srcLuid=s.srcLuid WHERE s.srcGuid=?",
@@ -418,11 +424,11 @@ public class DownloadClient extends AbstractPluginInstance {
 			throw new RuntimeException(e);
 		}
 	}
-	
+
 	/** @param all
 	 * @return source array */
 	public RecSource[] getSources(final boolean all) {
-		
+
 		if (this.searchLoader == null) {
 			assert false : "No search loader? Stopped? id=" + this.identity;
 			return new RecSource[0];
@@ -431,10 +437,10 @@ public class DownloadClient extends AbstractPluginInstance {
 		this.searchLoader.add(request);
 		return request.baseValue();
 	}
-	
+
 	/** @param source */
 	public void interestCancel(final RecSource source) {
-		
+
 		final String guid = source.getGuid();
 		synchronized (this.interests) {
 			final Interest info = this.interests.get(guid);
@@ -445,10 +451,10 @@ public class DownloadClient extends AbstractPluginInstance {
 			}
 		}
 	}
-	
+
 	/** @param source */
 	public void interestRegister(final RecSource source) {
-		
+
 		final String guid = source.getGuid();
 		synchronized (this.interests) {
 			final Interest check = this.interests.get(guid);
@@ -460,16 +466,16 @@ public class DownloadClient extends AbstractPluginInstance {
 			}
 		}
 	}
-	
+
 	/** @return connection */
 	public Connection nextConnection() {
-		
+
 		return this.connectionSource.nextElement();
 	}
-	
+
 	@Override
 	public void register() {
-		
+
 		this.connectionSource = this.getServer().getConnections().get(this.connection);
 		final BaseObject settingsPrivate = this.getSettingsPrivate();
 		{
@@ -493,7 +499,7 @@ public class DownloadClient extends AbstractPluginInstance {
 		this.taskInterest = new TaskInterest(this, this.client);
 		((StatusRegistry) this.getServer().getRootContext().baseGet(ProvideStatus.REGISTRY_CONTEXT_KEY, BaseObject.UNDEFINED).baseValue()).register(new Status(this));
 	}
-	
+
 	/** @param limit
 	 * @param all
 	 * @param timeout
@@ -503,16 +509,22 @@ public class DownloadClient extends AbstractPluginInstance {
 	 * @param filter
 	 * @return file array */
 	public List<RecFile> search(final int limit, final boolean all, final long timeout, final String sort, final long dateStart, final long dateEnd, final String filter) {
-		
+
 		if (this.currentFinder == null) {
 			return null;
 		}
 		final String sortReplace = sort == null
 			? null
 			: DownloadClient.REPLACEMENT_SEARCH_SORT.get(sort);
-		final ExecSearchProgram program = this.currentFinder.search(null, all, sortReplace == null
-			? sort
-			: sortReplace, dateStart, dateEnd, filter);
+		final ExecSearchProgram program = this.currentFinder.search(
+				null,
+				all,
+				sortReplace == null
+					? sort
+					: sortReplace,
+				dateStart,
+				dateEnd,
+				filter);
 		if (program == null) {
 			return null;
 		}
@@ -537,27 +549,27 @@ public class DownloadClient extends AbstractPluginInstance {
 		}
 		return new ListByMapEntryKey<>(result, this.sourceRecFile);
 	}
-	
+
 	/** @param followLink
 	 * @return alias array */
 	public RecAlias[] searchAliasesByFollowLink(final String followLink) {
-		
+
 		final RequestAliasesByFollowLink request = new RequestAliasesByFollowLink(this, followLink);
 		this.searchLoader.add(request);
 		return request.baseValue();
 	}
-	
+
 	/** @param guid
 	 * @return file */
 	public RecFile searchByGuid(final String guid) {
-		
+
 		final RequestByGuid request = new RequestByGuid(this, guid);
 		this.searchLoader.add(request);
 		return request.baseValue();
 	}
-	
+
 	final RecFile searchByGuid(final String guid, final Connection conn) {
-		
+
 		final StringBuilder query = new StringBuilder();
 		query.append("SELECT i.itmCrc,i.itmLuid,i.fldLuid,i.itmName,i.itmSize,i.itmDate,i.itmType,i.itmComment,i.itmPreview,i.itmLevel2Name,i.itmLevel3Name ")
 				.append("FROM d1Items i, d1Folders f, d1Sources s WHERE i.fldLuid=f.fldLuid AND f.srcLuid=s.srcLuid AND i.itmGuid=?")
@@ -585,14 +597,14 @@ public class DownloadClient extends AbstractPluginInstance {
 			throw new RuntimeException("searchByGuid", e);
 		}
 	}
-	
+
 	/** @param string
 	 * @param typeFilter
 	 * @param all
 	 * @return file array */
 	public final RecFile[] searchByMd5(final String string, final String typeFilter, final boolean all) {
-		
-		if (string == null || string.trim().length() == 0) {
+
+		if (string == null || string.isBlank()) {
 			return DownloadClient.EMPTY_FILE_ARRAY;
 		}
 		final String key = "s5\n" + string + '\n' + typeFilter + '\n' + all;
@@ -600,15 +612,15 @@ public class DownloadClient extends AbstractPluginInstance {
 		this.searchLoader.add(request);
 		return request.baseValue();
 	}
-	
+
 	/** @param string
 	 * @param typeFilter
 	 * @param all
 	 * @return file array */
 	public final RecFile[] searchByName(final String string, final String typeFilter, final boolean all) {
-		
+
 		final String filter = SyntaxQuery.filterToWhere("i.itmSearchName", ":", null, null, false, string.toLowerCase());
-		if (filter == null || filter.trim().length() == 0) {
+		if (filter == null || filter.isBlank()) {
 			return DownloadClient.EMPTY_FILE_ARRAY;
 		}
 		final String key = "sn\n" + filter + '\n' + typeFilter + '\n' + all;
@@ -616,14 +628,14 @@ public class DownloadClient extends AbstractPluginInstance {
 		this.searchLoader.add(request);
 		return request.baseValue();
 	}
-	
+
 	/** @param alias
 	 * @param typeFilter
 	 * @param all
 	 * @return group array */
 	public RecFileGroup[] searchFileGroupsByAlias(final String alias, final String typeFilter, final boolean all) {
-		
-		if (alias == null || alias.trim().length() == 0) {
+
+		if (alias == null || alias.isBlank()) {
 			return DownloadClient.EMPTY_GROUP_ARRAY;
 		}
 		final String key = "ga\n" + alias + '\n' + typeFilter + '\n' + all;
@@ -631,56 +643,56 @@ public class DownloadClient extends AbstractPluginInstance {
 		this.searchLoader.add(request);
 		return request.baseValue();
 	}
-	
+
 	/** @param guid
 	 * @param typeFilter
 	 * @param all
 	 * @param described
 	 * @return group array */
 	public RecFileGroup[] searchFileGroupsByFollowLink(final String guid, final String typeFilter, final boolean all, final boolean described) {
-		
-		if (guid == null || guid.trim().length() == 0) {
+
+		if (guid == null || guid.isBlank()) {
 			return DownloadClient.EMPTY_GROUP_ARRAY;
 		}
 		final String key = "gf\n" + guid + '\n' + typeFilter + '\n' + all + '\n' + described;
 		return this.cacheFileGroups.get(key, "", this.searchLoader, key, new RequestGroupsByFollowLink(key, this, guid, typeFilter, all, described));
 	}
-	
+
 	/** @param alias
 	 * @param typeFilter
 	 * @param all
 	 * @return file array */
 	public final RecFile[] searchFilesByAlias(final String alias, final String typeFilter, final boolean all) {
-		
-		if (alias == null || alias.trim().length() == 0) {
+
+		if (alias == null || alias.isBlank()) {
 			return DownloadClient.EMPTY_FILE_ARRAY;
 		}
 		final RequestByAlias request = new RequestByAlias(this, alias, typeFilter, all);
 		this.searchLoader.add(request);
 		return request.baseValue();
 	}
-	
+
 	/** @param guid
 	 * @param typeFilter
 	 * @param all
 	 * @return file array */
 	public final RecFile[] searchFilesByFollowLink(final String guid, final String typeFilter, final boolean all) {
-		
-		if (guid == null || guid.trim().length() == 0) {
+
+		if (guid == null || guid.isBlank()) {
 			return DownloadClient.EMPTY_FILE_ARRAY;
 		}
 		final RequestByFollowLink request = new RequestByFollowLink(this, guid, typeFilter, all);
 		this.searchLoader.add(request);
 		return request.baseValue();
 	}
-	
+
 	/** @param alias
 	 * @param typeFilter
 	 * @param all
 	 * @return group array */
 	public RecFileGroup[] searchFileVariantsByAlias(final String alias, final String typeFilter, final boolean all) {
-		
-		if (alias == null || alias.trim().length() == 0) {
+
+		if (alias == null || alias.isBlank()) {
 			return DownloadClient.EMPTY_GROUP_ARRAY;
 		}
 		final String key = "va\n" + alias + '\n' + typeFilter + '\n' + all;
@@ -688,14 +700,14 @@ public class DownloadClient extends AbstractPluginInstance {
 		this.searchLoader.add(request);
 		return request.baseValue();
 	}
-	
+
 	/** @param guid
 	 * @param typeFilter
 	 * @param all
 	 * @return group array */
 	public RecFileGroup[] searchFileVariantsByFollowLink(final String guid, final String typeFilter, final boolean all) {
-		
-		if (guid == null || guid.trim().length() == 0) {
+
+		if (guid == null || guid.isBlank()) {
 			return DownloadClient.EMPTY_GROUP_ARRAY;
 		}
 		final String key = "vf\n" + guid + '\n' + typeFilter + '\n' + all;
@@ -703,11 +715,11 @@ public class DownloadClient extends AbstractPluginInstance {
 		this.searchLoader.add(request);
 		return request.baseValue();
 	}
-	
+
 	/** @param names
 	 * @return known array */
 	public RecKnown[] searchKnown(final String names) {
-		
+
 		final Set<String> aliases = Create.tempSet();
 		final Set<RecKnown> pending = Create.tempSet();
 		for (final StringTokenizer st = new StringTokenizer(names, "\n"); st.hasMoreTokens();) {
@@ -755,7 +767,7 @@ public class DownloadClient extends AbstractPluginInstance {
 			return DownloadClient.EMPTY_KNOWN_ARRAY;
 		}
 	}
-	
+
 	/** @param conn
 	 * @param sequence
 	 * @param type
@@ -763,7 +775,7 @@ public class DownloadClient extends AbstractPluginInstance {
 	 * @param luid
 	 * @throws SQLException */
 	public final void serializeChange(final Connection conn, final int sequence, final String type, final String guid, final int luid) throws SQLException {
-		
+
 		try (final PreparedStatement ps = conn
 				.prepareStatement("INSERT INTO d1ChangeQueue(evtId,evtDate,evtSequence,evtOwner,evtCmdType,evtCmdGuid,evtCmdLuid) VALUES (?,?,?,?,?,?,?)")) {
 			ps.setString(1, Engine.createGuid());
@@ -773,25 +785,27 @@ public class DownloadClient extends AbstractPluginInstance {
 			ps.setInt(3, sequence);
 			ps.setString(4, this.identity);
 			ps.setString(5, type);
-			ps.setString(6, guid == null
-				? "*"
-				: guid);
+			ps.setString(
+					6,
+					guid == null
+						? "*"
+						: guid);
 			ps.setInt(7, luid);
 			ps.execute();
 		}
 	}
-	
+
 	@Override
 	public void setup() {
-		
+
 		final BaseObject info = this.getSettingsProtected();
 		this.connection = Base.getString(info, "connection", "default");
 		this.client = Convert.MapEntry.toBoolean(info, "client", false);
 	}
-	
+
 	@Override
 	public void start() {
-		
+
 		final BaseObject reflection = this.getServer().getRootContext().ri10GV;
 		reflection.baseDefine("Download", Base.forUnknown(new StaticAPI(this)));
 		this.lockManager = Lock.createManager(this.connectionSource, "d1Locks", this.identity);
@@ -826,9 +840,9 @@ public class DownloadClient extends AbstractPluginInstance {
 		this.searchLoader = new RunnerDatabaseRequestor("DLS-SEARCHER", this.connectionSource);
 		Act.launchService(Exec.createProcess(null, "DLS-SEARCH: " + this.toString()), this.searchLoader);
 	}
-	
+
 	final void statusFill(final StatusInfo data) {
-		
+
 		// data.put(
 		// "API, changes created",
 		// this.stsChangesCreated);
@@ -838,5 +852,5 @@ public class DownloadClient extends AbstractPluginInstance {
 		this.indexingDictionary.statusFill(data);
 		this.searchLoader.statusFill(data);
 	}
-	
+
 }
