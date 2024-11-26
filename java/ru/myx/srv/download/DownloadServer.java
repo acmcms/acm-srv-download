@@ -152,8 +152,7 @@ public class DownloadServer extends AbstractServer {
 	
 	/** @param id
 	 * @param check
-	 * @param attributes
-	 */
+	 * @param attributes */
 	public DownloadServer(final String id, final String check, final BaseObject attributes) {
 		
 		super(id, Base.getString(attributes, "domain", id), Exec.currentProcess());
@@ -175,7 +174,7 @@ public class DownloadServer extends AbstractServer {
 			serverPluginProperties.setProperty("id", "shares");
 			this.settingsRoots.setup(this, serverPluginProperties);
 		}
-		Act.later(this.getRootContext(), DownloadServer.TASK_MAINTENANCE, this, 10000L);
+		Act.later(this.getRootContext(), DownloadServer.TASK_MAINTENANCE, this, 10_000L);
 		final BaseObject selfSettings = this.settingsSelf.getSettingsProtected();
 		this.maxConnTotal = Convert.MapEntry.toInt(selfSettings, "max-conn-total", DownloadServer.DEF_MAX_CONN_TOTAL);
 		this.maxConnAddress = Convert.MapEntry.toInt(selfSettings, "max-conn-address", DownloadServer.DEF_MAX_CONN_ADDRESS);
@@ -183,149 +182,6 @@ public class DownloadServer extends AbstractServer {
 		selfSettings.baseDefine("max-conn-address", this.maxConnAddress);
 		this.settingsSelf.commitProtectedSettings();
 		this.counter = new CounterBlock(this.maxConnTotal, this.maxConnAddress);
-	}
-	
-	@Override
-	public boolean absorb(final ServeRequest request) {
-		
-		final ReplyAnswer response;
-		if ("DELETE".equals(request.getVerb())) {
-			final Server server = Handle.getServer(this.check);
-			response = server != null
-				? this.respondDeleteFile(request)
-				: Reply.stringForbidden("DLS", request, "Check failed");
-		} else //
-		if ("CREATE".equals(request.getVerb())) {
-			final Server server = Handle.getServer(this.check);
-			response = server != null
-				? this.respondCreateFile(request)
-				: Reply.stringForbidden("DLS", request, "Check failed");
-		} else {
-			final String identifierOriginal = request.getResourceIdentifier();
-			if ("/@welcome.xml".equals(identifierOriginal)) {
-				response = this.respondWelcome(request);
-			} else //
-			if ("/@load.xml".equals(identifierOriginal)) {
-				response = this.respondLoad(request);
-			} else //
-			if (identifierOriginal.endsWith("/@listing.xml")) {
-				response = this.respondFolders(request);
-			} else //
-			if (identifierOriginal.endsWith("/@listing.htm")) {
-				response = this.respondFoldersHtm(request);
-			} else //
-			if (identifierOriginal.endsWith("/@play.m3u")) {
-				response = DownloadServer.respondPlayM3u(request);
-			} else //
-			if (identifierOriginal.endsWith("/@play.pls")) {
-				response = DownloadServer.respondPlayPls(request);
-			} else //
-			if (identifierOriginal.endsWith("/@play.asx")) {
-				response = DownloadServer.respondPlayAsx(request);
-			} else //
-			if (identifierOriginal.endsWith("/@preview.m3u")) {
-				response = DownloadServer.respondPreviewM3u(request);
-			} else //
-			if (identifierOriginal.endsWith("/@preview.pls")) {
-				response = DownloadServer.respondPreviewPls(request);
-			} else //
-			if (identifierOriginal.endsWith("/@preview.asx")) {
-				response = DownloadServer.respondPreviewAsx(request);
-			} else //
-			if (identifierOriginal.endsWith("/@preview.audio")) {
-				response = this.respondPreviewAudio(request);
-			} else //
-			if (identifierOriginal.endsWith("/@preview.image")) {
-				response = this.respondPreviewImage1(request);
-			} else //
-			if (identifierOriginal.endsWith("/@preview2.image")) {
-				response = this.respondPreviewImage2(request);
-			} else {
-				final String address = request.getSourceAddress();
-				final int index = CounterBlock.makeIndex(address);
-				final int action = this.counter.incrementCheck(index, address);
-				if (action == CounterBlock.GRANTED) {
-					request.setAttribute("execute", this.counter.getCounter(index));
-					final boolean download = !identifierOriginal.endsWith(".open");
-					response = this.respondDownload(
-							request, //
-							identifierOriginal.endsWith(".rename"),
-							download //
-					);
-				} else //
-				if (action == CounterBlock.DENIED_TOTAL) {
-					response = Reply.string(
-							"DLSRV", //
-							request,
-							"Connection limit (total): " + "system is out of concurrent connection limit of " + this.maxConnTotal + " connections!" //
-					) //
-							.setCode(Reply.CD_BUSY)//
-							.setAttribute("Retry-After", 60)//
-							.setPrivate()//
-							.setNoCaching()//
-							.setFinal();
-				} else //
-				if (action == CounterBlock.DENIED_ADDRESS) {
-					response = Reply.string(
-							"DLSRV", //
-							request,
-							"Connection limit (per address): " + "your IP(" + address + ") is out of concurrent connection limit of " + this.maxConnAddress + " connections!" //
-					) //
-							.setCode(Reply.CD_BUSY) //
-							.setAttribute("Retry-After", 60)//
-							.setPrivate() //
-							.setNoCaching() //
-							.setFinal();
-				} else {
-					response = Reply.string(
-							"DLSRV", //
-							request,
-							"Connection limit (unknown)!" //
-					) //
-							.setCode(Reply.CD_BUSY) //
-							.setAttribute("Retry-After", 60) //
-							.setPrivate() //
-							.setNoCaching() //
-							.setFinal();
-				}
-			}
-		}
-		request.getResponseTarget().apply(response);
-		return true;
-	}
-	
-	final CounterBlock getLoadCounter() {
-		
-		return this.counter;
-	}
-	
-	final Map<String, Checker> getServerChecks() {
-		
-		if (this.serverChecks == null) {
-			synchronized (this) {
-				if (this.serverChecks == null) {
-					this.serverChecks = this.internCreateServerChecks();
-					this.serverSettingsDate = Engine.fastTime();
-				}
-			}
-		}
-		final boolean rebuild;
-		if (this.serverSettingsDate < Engine.fastTime() - 1000L * 60L) {
-			synchronized (this) {
-				if (this.serverSettingsDate < Engine.fastTime() - 1000L * 60L) {
-					rebuild = true;
-					this.serverSettingsDate = Engine.fastTime();
-				} else {
-					rebuild = false;
-				}
-			}
-		} else {
-			rebuild = false;
-		}
-		if (rebuild) {
-			Act.whenIdle(null, new ServerSettngsRebuilderTask(), this);
-		}
-		return this.serverChecks;
 	}
 	
 	private final String getServerIdentity() {
@@ -342,78 +198,6 @@ public class DownloadServer extends AbstractServer {
 			}
 		}
 		return serverIdentity;
-	}
-	
-	final Map<String, Share> getServerRoots() {
-		
-		if (this.serverRoots == null) {
-			synchronized (this) {
-				if (this.serverRoots == null) {
-					this.serverRoots = this.internCreateServerRoots();
-					this.serverSettingsDate = Engine.fastTime();
-				}
-			}
-		}
-		final boolean rebuild;
-		if (this.serverSettingsDate < Engine.fastTime() - 1000L * 60L) {
-			synchronized (this) {
-				if (this.serverSettingsDate < Engine.fastTime() - 1000L * 60L) {
-					rebuild = true;
-					this.serverSettingsDate = Engine.fastTime();
-				} else {
-					rebuild = false;
-				}
-			}
-		} else {
-			rebuild = false;
-		}
-		if (rebuild) {
-			Act.whenIdle(null, new Runnable() {
-
-				@Override
-				public void run() {
-
-					DownloadServer.this.rebuildServerSettings();
-				}
-			});
-		}
-		return this.serverRoots;
-	}
-	
-	final Map<String, TrafficFilter> getServerTraffics() {
-		
-		if (this.serverTraffics == null) {
-			synchronized (this) {
-				if (this.serverTraffics == null) {
-					this.serverTraffics = this.internCreateServerTraffics();
-					this.serverSettingsDate = Engine.fastTime();
-				}
-			}
-		}
-		final boolean rebuild;
-		if (this.serverSettingsDate < Engine.fastTime() - 1000L * 60L) {
-			synchronized (this) {
-				if (this.serverSettingsDate < Engine.fastTime() - 1000L * 60L) {
-					rebuild = true;
-					this.serverSettingsDate = Engine.fastTime();
-				} else {
-					rebuild = false;
-				}
-			}
-		} else {
-			rebuild = false;
-		}
-		if (rebuild) {
-			Act.whenIdle(null, new Runnable() {
-
-				@Override
-				public void run() {
-
-					DownloadServer.this.rebuildServerSettings();
-				}
-			});
-		}
-		return this.serverTraffics;
 	}
 	
 	private final Map<String, Checker> internCreateServerChecks() {
@@ -474,13 +258,6 @@ public class DownloadServer extends AbstractServer {
 			}
 		}
 		return serverTraffics;
-	}
-	
-	final void rebuildServerSettings() {
-		
-		this.serverRoots = this.internCreateServerRoots();
-		this.serverChecks = this.internCreateServerChecks();
-		this.serverTraffics = this.internCreateServerTraffics();
 	}
 	
 	private ReplyAnswer respondCreateFile(final ServeRequest request) {
@@ -1020,5 +797,227 @@ public class DownloadServer extends AbstractServer {
 				.putAppend("limits", limits)//
 		;
 		return DownloadServer.createXmlResponse(request, welcome);
+	}
+	
+	@Override
+	public boolean absorb(final ServeRequest request) {
+		
+		final ReplyAnswer response;
+		if ("DELETE".equals(request.getVerb())) {
+			final Server server = Handle.getServer(this.check);
+			response = server != null
+				? this.respondDeleteFile(request)
+				: Reply.stringForbidden("DLS", request, "Check failed");
+		} else //
+		if ("CREATE".equals(request.getVerb())) {
+			final Server server = Handle.getServer(this.check);
+			response = server != null
+				? this.respondCreateFile(request)
+				: Reply.stringForbidden("DLS", request, "Check failed");
+		} else {
+			final String identifierOriginal = request.getResourceIdentifier();
+			if ("/@welcome.xml".equals(identifierOriginal)) {
+				response = this.respondWelcome(request);
+			} else //
+			if ("/@load.xml".equals(identifierOriginal)) {
+				response = this.respondLoad(request);
+			} else //
+			if (identifierOriginal.endsWith("/@listing.xml")) {
+				response = this.respondFolders(request);
+			} else //
+			if (identifierOriginal.endsWith("/@listing.htm")) {
+				response = this.respondFoldersHtm(request);
+			} else //
+			if (identifierOriginal.endsWith("/@play.m3u")) {
+				response = DownloadServer.respondPlayM3u(request);
+			} else //
+			if (identifierOriginal.endsWith("/@play.pls")) {
+				response = DownloadServer.respondPlayPls(request);
+			} else //
+			if (identifierOriginal.endsWith("/@play.asx")) {
+				response = DownloadServer.respondPlayAsx(request);
+			} else //
+			if (identifierOriginal.endsWith("/@preview.m3u")) {
+				response = DownloadServer.respondPreviewM3u(request);
+			} else //
+			if (identifierOriginal.endsWith("/@preview.pls")) {
+				response = DownloadServer.respondPreviewPls(request);
+			} else //
+			if (identifierOriginal.endsWith("/@preview.asx")) {
+				response = DownloadServer.respondPreviewAsx(request);
+			} else //
+			if (identifierOriginal.endsWith("/@preview.audio")) {
+				response = this.respondPreviewAudio(request);
+			} else //
+			if (identifierOriginal.endsWith("/@preview.image")) {
+				response = this.respondPreviewImage1(request);
+			} else //
+			if (identifierOriginal.endsWith("/@preview2.image")) {
+				response = this.respondPreviewImage2(request);
+			} else {
+				final String address = request.getSourceAddress();
+				final int index = CounterBlock.makeIndex(address);
+				final int action = this.counter.incrementCheck(index, address);
+				if (action == CounterBlock.GRANTED) {
+					request.setAttribute("execute", this.counter.getCounter(index));
+					final boolean download = !identifierOriginal.endsWith(".open");
+					response = this.respondDownload(
+							request, //
+							identifierOriginal.endsWith(".rename"),
+							download //
+					);
+				} else //
+				if (action == CounterBlock.DENIED_TOTAL) {
+					response = Reply.string(
+							"DLSRV", //
+							request,
+							"Connection limit (total): " + "system is out of concurrent connection limit of " + this.maxConnTotal + " connections!" //
+					) //
+							.setCode(Reply.CD_BUSY)//
+							.setAttribute("Retry-After", 60)//
+							.setPrivate()//
+							.setNoCaching()//
+							.setFinal();
+				} else //
+				if (action == CounterBlock.DENIED_ADDRESS) {
+					response = Reply.string(
+							"DLSRV", //
+							request,
+							"Connection limit (per address): " + "your IP(" + address + ") is out of concurrent connection limit of " + this.maxConnAddress + " connections!" //
+					) //
+							.setCode(Reply.CD_BUSY) //
+							.setAttribute("Retry-After", 60)//
+							.setPrivate() //
+							.setNoCaching() //
+							.setFinal();
+				} else {
+					response = Reply.string(
+							"DLSRV", //
+							request,
+							"Connection limit (unknown)!" //
+					) //
+							.setCode(Reply.CD_BUSY) //
+							.setAttribute("Retry-After", 60) //
+							.setPrivate() //
+							.setNoCaching() //
+							.setFinal();
+				}
+			}
+		}
+		request.getResponseTarget().apply(response);
+		return true;
+	}
+	
+	final CounterBlock getLoadCounter() {
+		
+		return this.counter;
+	}
+	
+	final Map<String, Checker> getServerChecks() {
+		
+		if (this.serverChecks == null) {
+			synchronized (this) {
+				if (this.serverChecks == null) {
+					this.serverChecks = this.internCreateServerChecks();
+					this.serverSettingsDate = Engine.fastTime();
+				}
+			}
+		}
+		final boolean rebuild;
+		if (this.serverSettingsDate < Engine.fastTime() - 60_000L) {
+			synchronized (this) {
+				if (this.serverSettingsDate < Engine.fastTime() - 60_000L) {
+					rebuild = true;
+					this.serverSettingsDate = Engine.fastTime();
+				} else {
+					rebuild = false;
+				}
+			}
+		} else {
+			rebuild = false;
+		}
+		if (rebuild) {
+			Act.whenIdle(null, new ServerSettngsRebuilderTask(), this);
+		}
+		return this.serverChecks;
+	}
+	
+	final Map<String, Share> getServerRoots() {
+		
+		if (this.serverRoots == null) {
+			synchronized (this) {
+				if (this.serverRoots == null) {
+					this.serverRoots = this.internCreateServerRoots();
+					this.serverSettingsDate = Engine.fastTime();
+				}
+			}
+		}
+		final boolean rebuild;
+		if (this.serverSettingsDate < Engine.fastTime() - 60_000L) {
+			synchronized (this) {
+				if (this.serverSettingsDate < Engine.fastTime() - 60_000L) {
+					rebuild = true;
+					this.serverSettingsDate = Engine.fastTime();
+				} else {
+					rebuild = false;
+				}
+			}
+		} else {
+			rebuild = false;
+		}
+		if (rebuild) {
+			Act.whenIdle(null, new Runnable() {
+
+				@Override
+				public void run() {
+
+					DownloadServer.this.rebuildServerSettings();
+				}
+			});
+		}
+		return this.serverRoots;
+	}
+	
+	final Map<String, TrafficFilter> getServerTraffics() {
+		
+		if (this.serverTraffics == null) {
+			synchronized (this) {
+				if (this.serverTraffics == null) {
+					this.serverTraffics = this.internCreateServerTraffics();
+					this.serverSettingsDate = Engine.fastTime();
+				}
+			}
+		}
+		final boolean rebuild;
+		if (this.serverSettingsDate < Engine.fastTime() - 60_000L) {
+			synchronized (this) {
+				if (this.serverSettingsDate < Engine.fastTime() - 60_000L) {
+					rebuild = true;
+					this.serverSettingsDate = Engine.fastTime();
+				} else {
+					rebuild = false;
+				}
+			}
+		} else {
+			rebuild = false;
+		}
+		if (rebuild) {
+			Act.whenIdle(null, new Runnable() {
+
+				@Override
+				public void run() {
+
+					DownloadServer.this.rebuildServerSettings();
+				}
+			});
+		}
+		return this.serverTraffics;
+	}
+	
+	final void rebuildServerSettings() {
+		
+		this.serverRoots = this.internCreateServerRoots();
+		this.serverChecks = this.internCreateServerChecks();
+		this.serverTraffics = this.internCreateServerTraffics();
 	}
 }

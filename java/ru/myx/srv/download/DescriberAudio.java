@@ -1,6 +1,6 @@
 /*
  * Created on 31.10.2004
- * 
+ *
  * Window - Preferences - Java - Code Style - Code Templates
  */
 package ru.myx.srv.download;
@@ -31,11 +31,9 @@ import ru.myx.ae3.help.FileName;
 import ru.myx.ae3.help.Format;
 import ru.myx.ae3.report.Report;
 
-/**
- * @author myx
- * 		
- *         Window - Preferences - Java - Code Style - Code Templates
- */
+/** @author myx
+ *
+ *         Window - Preferences - Java - Code Style - Code Templates */
 class DescriberAudio implements Describer {
 	
 	private static final Object DEFAULT_THUMBNAIL_BITRATE = System.getProperty("tritonus.lame.bitrate", "8");
@@ -53,11 +51,6 @@ class DescriberAudio implements Describer {
 		return Math.abs(f1 - f2) < DescriberAudio.DELTA;
 	}
 	
-	static boolean isPcm(final AudioFormat.Encoding encoding) {
-		
-		return encoding.equals(AudioFormat.Encoding.PCM_SIGNED) || encoding.equals(AudioFormat.Encoding.PCM_UNSIGNED);
-	}
-	
 	private static final boolean stringValid(final String string) {
 		
 		for (int i = string.length() - 1; i >= 0; --i) {
@@ -68,11 +61,17 @@ class DescriberAudio implements Describer {
 		return true;
 	}
 	
+	static boolean isPcm(final AudioFormat.Encoding encoding) {
+		
+		return encoding.equals(AudioFormat.Encoding.PCM_SIGNED) || encoding.equals(AudioFormat.Encoding.PCM_UNSIGNED);
+	}
+	
 	private final Object thumbnailBitrate;
 	
 	private final AudioFormat outFormat;
 	
 	DescriberAudio(final BaseObject settings) {
+
 		this.thumbnailBitrate = Base.getJava(settings, "thumbnailAudioBitrate", DescriberAudio.DEFAULT_THUMBNAIL_BITRATE);
 		this.outFormat = new AudioFormat(DescriberAudio.OUT_ENCODING, -1, -1, 1, -1, -1, false, Collections.singletonMap("tritonus.lame.bitrate", this.thumbnailBitrate));
 	}
@@ -105,7 +104,7 @@ class DescriberAudio implements Describer {
 						output.write(buffer, 0, read);
 					}
 					process.waitFor();
-					Thread.sleep(10000L);
+					Thread.sleep(10_000L);
 					Transfer.toStream(stderr, error.getOutputStream(), true);
 					final TransferBuffer errorBuffer = error.toBuffer();
 					if (errorBuffer.hasRemaining()) {
@@ -211,9 +210,12 @@ class DescriberAudio implements Describer {
 							sourceFormat.getFrameRate(),
 							sourceFormat.isBigEndian());
 					converted = sourceFormat.getSampleSizeInBits() == 16
-						? new AudioInputStream(sourceFormat.getEncoding() == AudioFormat.Encoding.PCM_SIGNED
-							? (InputStream) new InputStreamSignedStereoMono16(converted)
-							: (InputStream) new InputStreamUnsignedStereoMono16(converted), targetFormat, frameLength)
+						? new AudioInputStream(
+								sourceFormat.getEncoding() == AudioFormat.Encoding.PCM_SIGNED
+									? (InputStream) new InputStreamSignedStereoMono16(converted)
+									: (InputStream) new InputStreamUnsignedStereoMono16(converted),
+								targetFormat,
+								frameLength)
 						: new AudioInputStream(new InputStreamStereoMono8(converted), targetFormat, frameLength);
 				} else //
 				if (false && converted.getFormat().getSampleSizeInBits() != 8) {
@@ -226,9 +228,12 @@ class DescriberAudio implements Describer {
 							(8 + 7) / 8,
 							sourceFormat.getFrameRate(),
 							sourceFormat.isBigEndian());
-					converted = new AudioInputStream(sourceFormat.getEncoding() == AudioFormat.Encoding.PCM_SIGNED
-						? (InputStream) new InputStreamSignedMono16(converted)
-						: (InputStream) new InputStreamUnsignedMono16(converted), targetFormat, frameLength);
+					converted = new AudioInputStream(
+							sourceFormat.getEncoding() == AudioFormat.Encoding.PCM_SIGNED
+								? (InputStream) new InputStreamSignedMono16(converted)
+								: (InputStream) new InputStreamUnsignedMono16(converted),
+							targetFormat,
+							frameLength);
 				}
 				if (false && !DescriberAudio.equals(converted.getFormat().getSampleRate(), 8000.0f)) {
 					final AudioFormat sourceFormat = converted.getFormat();
@@ -289,7 +294,7 @@ class DescriberAudio implements Describer {
 		}
 		final long duration = Convert.MapEntry.toLong(properties, "duration", 0L);
 		if (duration > 0L) {
-			result.append(", ").append(duration / (1000L * 1000L * 60L)).append(':');
+			result.append(", ").append(duration / (1000L * 60_000L)).append(':');
 			final int seconds = (int) (duration / (1000L * 1000L) % 60L);
 			if (seconds < 10) {
 				result.append('0');
@@ -301,7 +306,7 @@ class DescriberAudio implements Describer {
 		} else {
 			final long duration2 = (long) (1000L * 1000L * format.getFrameLength() / sampleRate);
 			if (duration2 > 0L) {
-				result.append(", ").append(duration2 / (1000L * 1000L * 60L)).append(':');
+				result.append(", ").append(duration2 / (1000L * 60_000L)).append(':');
 				final int seconds = (int) (duration2 / (1000L * 1000L) % 60L);
 				if (seconds < 10) {
 					result.append('0');

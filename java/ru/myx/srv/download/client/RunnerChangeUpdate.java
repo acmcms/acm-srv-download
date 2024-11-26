@@ -25,36 +25,33 @@ import ru.myx.ae3.report.Report;
 import ru.myx.jdbc.lock.Runner;
 import ru.myx.util.EntrySimple;
 
-/**
- * @author myx
- * 		
- */
+/** @author myx */
 final class RunnerChangeUpdate implements Runnable, Runner {
-	
+
 	private static final String OWNER = "D1/UPDATE";
-	
+
 	private static final int LIMIT_BULK_TASKS = 50;
-	
+
 	private static final int LIMIT_BULK_UPGRADE = 25;
-	
+
 	private static final int SEQ_HIGH = 4255397;
-	
+
 	private static final Set<String> SYSTEM_KEYS = RunnerChangeUpdate.createSystemKeys();
-	
+
 	private static final Set<String> createSystemKeys() {
-		
+
 		final Set<String> result = Create.tempSet();
 		result.add("$key");
 		result.add("$description");
 		result.add("$level2");
 		return result;
 	}
-	
+
 	private static List<Object> doMaintainFixIndicesGetThem0(final Connection conn) throws SQLException {
-		
+
 		final String query = "SELECT t.itmGuid,t.itmLuid FROM d1Items t LEFT OUTER JOIN d1Indexed i ON t.itmLuid=i.luid WHERE i.luid is NULL AND t.itmCreated<?";
 		try (final PreparedStatement ps = conn.prepareStatement(query, ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)) {
-			ps.setTimestamp(1, new Timestamp(Engine.fastTime() - 1000L * 60L * 60L));
+			ps.setTimestamp(1, new Timestamp(Engine.fastTime() - 60_000L * 60L));
 			try (final ResultSet rs = ps.executeQuery()) {
 				if (rs.next()) {
 					final List<Object> result = new ArrayList<>();
@@ -70,41 +67,42 @@ final class RunnerChangeUpdate implements Runnable, Runner {
 			}
 		}
 	}
-	
+
 	private static final void eventDone(final Connection conn, final String evtId) throws SQLException {
-		
+
 		try (final PreparedStatement ps = conn.prepareStatement("DELETE FROM d1ChangeQueue WHERE evtId=?")) {
 			ps.setString(1, evtId);
 			ps.execute();
 		}
 	}
-	
+
 	private final DownloadClient server;
-	
+
 	private final Indexing indexing;
-	
+
 	private final int indexingVersion;
-	
+
 	private long lastHealth;
-	
+
 	private boolean destroyed = false;
-	
+
 	RunnerChangeUpdate(final DownloadClient server, final Indexing indexing) {
+		
 		this.server = server;
 		this.indexing = indexing;
 		this.indexingVersion = indexing.getVersion();
 	}
-	
+
 	private final void doClean(final Connection conn, final Map<String, Object> task) throws Throwable {
-		
+
 		final int luid = Convert.MapEntry.toInt(task, "evtCmdLuid", -1);
 		if (luid != -1) {
 			this.doCleanIndices(conn, luid);
 		}
 	}
-	
+
 	private final void doCleanIndices(final Connection conn, final int lnkLuid) throws Throwable {
-		
+
 		Report.event(RunnerChangeUpdate.OWNER, "CLEANING_INDEX", "luid=" + lnkLuid);
 		this.indexing.doDelete(conn, lnkLuid);
 		try (final PreparedStatement ps = conn.prepareStatement("DELETE FROM d1Indices WHERE luid=?")) {
@@ -112,9 +110,9 @@ final class RunnerChangeUpdate implements Runnable, Runner {
 			ps.execute();
 		}
 	}
-	
+
 	private final boolean doCreate(final Connection conn, final Map<String, Object> task) throws Throwable {
-		
+
 		final String guid = Convert.MapEntry.toString(task, "evtCmdGuid", "").trim();
 		final RecFile file = this.server.searchByGuid(guid);
 		if (file != null) {
@@ -125,22 +123,22 @@ final class RunnerChangeUpdate implements Runnable, Runner {
 		}
 		return false;
 	}
-	
+
 	private final void doIndex(final Connection conn, final RecFile file) throws Throwable {
-		
+
 		final Map<String, Object> data = Create.tempMap();
 		data.put("$key", file.getName());
 		data.put("$description", file.getDescription(conn));
 		data.put("$level2", file.getLevel2Name());
 		this.indexing.doIndex(conn, null, null, ModuleInterface.STATE_PUBLISH, RunnerChangeUpdate.SYSTEM_KEYS, data, false, file.getKeyLocal());
 	}
-	
+
 	private void doMaintain(final Connection conn, final BaseObject settings) {
-		
+
 		final int lastVersion = Convert.MapEntry.toInt(settings, "runnerVersion", 0);
 		final long nextClean = Convert.MapEntry.toLong(settings, "deadCleanupDate", 0L);
 		if (lastVersion < this.getVersion() || nextClean < Engine.fastTime()) {
-			settings.baseDefine("deadCleanupDate", Base.forDateMillis(Engine.fastTime() + 1000L * 60L * 60L * 24L));
+			settings.baseDefine("deadCleanupDate", Base.forDateMillis(Engine.fastTime() + 60_000L * 60L * 24L));
 			try {
 				conn.setAutoCommit(false);
 				try {
@@ -153,7 +151,7 @@ final class RunnerChangeUpdate implements Runnable, Runner {
 						// ignore
 					}
 					Report.exception(RunnerChangeUpdate.OWNER, "Unexpected exception while collecting garbage in storage", t);
-					settings.baseDefine("deadCleanupDate", Base.forDateMillis(Engine.fastTime() + 30L * 1000L * 60L));
+					settings.baseDefine("deadCleanupDate", Base.forDateMillis(Engine.fastTime() + 30L * 60_000L));
 				}
 			} catch (final Throwable t) {
 				try {
@@ -162,7 +160,7 @@ final class RunnerChangeUpdate implements Runnable, Runner {
 					// ignore
 				}
 				Report.exception(RunnerChangeUpdate.OWNER, "Unexpected exception while collecting garbage in storage", t);
-				settings.baseDefine("deadCleanupDate", Base.forDateMillis(Engine.fastTime() + 30L * 1000L * 60L));
+				settings.baseDefine("deadCleanupDate", Base.forDateMillis(Engine.fastTime() + 30L * 60_000L));
 			} finally {
 				try {
 					conn.setAutoCommit(true);
@@ -174,28 +172,28 @@ final class RunnerChangeUpdate implements Runnable, Runner {
 			this.server.commitProtectedSettings();
 		}
 	}
-	
+
 	private void doMaintainClearSources(final Connection conn, final BaseObject settings) {
-		
+
 		final long nextClean = Convert.MapEntry.toLong(settings, "sourcesCleanupDate", 0L);
 		if (nextClean < Engine.fastTime()) {
 			try {
 				try (final PreparedStatement ps = conn.prepareStatement("DELETE FROM d1SourceHistory WHERE logDate<?")) {
-					ps.setTimestamp(1, new Timestamp(Engine.fastTime() - 1000L * 60L * 60L * 24L * 7L));
+					ps.setTimestamp(1, new Timestamp(Engine.fastTime() - 60_000L * 60L * 24L * 7L));
 					ps.execute();
 				}
-				settings.baseDefine("sourcesCleanupDate", Base.forDateMillis(Engine.fastTime() + 1000L * 60L * 60L * 24L));
+				settings.baseDefine("sourcesCleanupDate", Base.forDateMillis(Engine.fastTime() + 60_000L * 60L * 24L));
 			} catch (final SQLException e) {
-				settings.baseDefine("sourcesCleanupDate", Base.forDateMillis(Engine.fastTime() + 1000L * 60L * 60L));
+				settings.baseDefine("sourcesCleanupDate", Base.forDateMillis(Engine.fastTime() + 60_000L * 60L));
 				throw new RuntimeException(e);
 			} finally {
 				this.server.commitProtectedSettings();
 			}
 		}
 	}
-	
+
 	private void doMaintainDropDuplicates(final Connection conn) throws SQLException {
-		
+
 		List<Integer> result = null;
 		{
 			final String query = "SELECT MAX(itmLuid) as del FROM d1Items GROUP BY itmCrc, itmName, fldLuid HAVING count(*)>1";
@@ -234,9 +232,9 @@ final class RunnerChangeUpdate implements Runnable, Runner {
 			}
 		}
 	}
-	
+
 	private void doMaintainIndexing(final Connection conn, final BaseObject settings) {
-		
+
 		final int indexingVersion = Convert.MapEntry.toInt(settings, "indexingVersion", 0);
 		if (indexingVersion != this.indexingVersion) {
 			try {
@@ -262,25 +260,25 @@ final class RunnerChangeUpdate implements Runnable, Runner {
 				} catch (final RuntimeException e) {
 					throw e;
 				}
-				settings.baseDefine("indexCheckDate", Base.forDateMillis(Engine.fastTime() + 1000L * 60L * 60L * 24L));
+				settings.baseDefine("indexCheckDate", Base.forDateMillis(Engine.fastTime() + 60_000L * 60L * 24L));
 			} catch (final SQLException e) {
-				settings.baseDefine("indexCheckDate", Base.forDateMillis(Engine.fastTime() + 1000L * 60L * 60L));
+				settings.baseDefine("indexCheckDate", Base.forDateMillis(Engine.fastTime() + 60_000L * 60L));
 				throw new RuntimeException(e);
 			} finally {
 				this.server.commitProtectedSettings();
 			}
 		}
 	}
-	
+
 	private void doMaintainUpdateHealth(final Connection conn) {
-		
+
 		if (this.lastHealth < Engine.fastTime()) {
-			this.lastHealth = Engine.fastTime() + 1000L * 60L * 7L;
+			this.lastHealth = Engine.fastTime() + 60_000L * 7L;
 			try {
 				try (final PreparedStatement ps = conn.prepareStatement("UPDATE d1Sources SET srcReady=0, srcHealth=0 WHERE (srcMaintainer=? AND srcChecked<?) OR srcChecked<?")) {
 					ps.setString(1, this.server.getIdentity());
-					ps.setTimestamp(2, new Timestamp(Engine.fastTime() - 1000L * 60L * 7L));
-					ps.setTimestamp(3, new Timestamp(Engine.fastTime() - 1000L * 60L * 15L));
+					ps.setTimestamp(2, new Timestamp(Engine.fastTime() - 60_000L * 7L));
+					ps.setTimestamp(3, new Timestamp(Engine.fastTime() - 60_000L * 15L));
 					ps.execute();
 				}
 			} catch (final SQLException e) {
@@ -288,16 +286,16 @@ final class RunnerChangeUpdate implements Runnable, Runner {
 			}
 		}
 	}
-	
+
 	private final void doUpdate(final Connection conn, final Map<String, Object> task) throws Throwable {
-		
+
 		final String guid = Convert.MapEntry.toString(task, "evtCmdGuid", "").trim();
 		final int luid = Convert.MapEntry.toInt(task, "evtCmdLuid", -1);
 		this.doUpdate(conn, guid, luid);
 	}
-	
+
 	private final void doUpdate(final Connection conn, final String lnkId, final int luid) throws Throwable {
-		
+
 		final RecFile file = this.server.searchByGuid(lnkId, conn);
 		if (file != null) {
 			Report.event(RunnerChangeUpdate.OWNER, "INDEXING", "update file data, guid=" + lnkId + ", luid=" + luid);
@@ -310,9 +308,9 @@ final class RunnerChangeUpdate implements Runnable, Runner {
 			this.indexing.doDelete(conn, luid);
 		}
 	}
-	
+
 	private final void doUpdateAll(final Connection conn, final Map<String, Object> task) throws Throwable {
-		
+
 		final String crc = Convert.MapEntry.toString(task, "evtCmdGuid", "").trim();
 		final List<Object> linkData = new ArrayList<>();
 		try (final PreparedStatement ps = conn
@@ -339,9 +337,9 @@ final class RunnerChangeUpdate implements Runnable, Runner {
 			}
 		}
 	}
-	
+
 	private final void doUpgradeIndex(final Connection conn, final int toVersion) throws Throwable {
-		
+
 		if (this.indexingVersion < toVersion) {
 			this.server.serializeChange(conn, RunnerChangeUpdate.SEQ_HIGH, "upgrade-index", "*", toVersion);
 			return;
@@ -368,15 +366,15 @@ final class RunnerChangeUpdate implements Runnable, Runner {
 			}
 		}
 	}
-	
+
 	private final void doUpgradeIndex(final Connection conn, final Map<String, Object> task) throws Throwable {
-		
+
 		final int toVersion = Convert.MapEntry.toInt(task, "evtCmdLuid", -1);
 		this.doUpgradeIndex(conn, toVersion);
 	}
-	
+
 	private final void eventIndexed(final Connection conn, final RecFile file, final boolean created) throws SQLException {
-		
+
 		if (created) {
 			try {
 				try (final PreparedStatement ps = conn.prepareStatement("INSERT INTO d1Indexed(luid,idxVersion,itmIndexed) VALUES (?,?,?)")) {
@@ -411,16 +409,16 @@ final class RunnerChangeUpdate implements Runnable, Runner {
 			}
 		}
 	}
-	
+
 	@Override
 	public int getVersion() {
-		
+
 		return 10;
 	}
-	
+
 	@Override
 	public void run() {
-		
+
 		if (this.destroyed) {
 			return;
 		}
@@ -429,13 +427,13 @@ final class RunnerChangeUpdate implements Runnable, Runner {
 			conn = this.server.nextConnection();
 			if (conn == null) {
 				if (!this.destroyed) {
-					Act.later(this.server.getServer().getRootContext(), this, 10000L);
+					Act.later(this.server.getServer().getRootContext(), this, 10_000L);
 				}
 				return;
 			}
 		} catch (final Throwable t) {
 			if (!this.destroyed) {
-				Act.later(this.server.getServer().getRootContext(), this, 10000L);
+				Act.later(this.server.getServer().getRootContext(), this, 10_000L);
 			}
 			return;
 		}
@@ -514,29 +512,32 @@ final class RunnerChangeUpdate implements Runnable, Runner {
 				// ignore
 			}
 			if (!this.destroyed) {
-				Act.later(this.server.getServer().getRootContext(), this, highLoad
-					? 5000L
-					: 30000L);
+				Act.later(
+						this.server.getServer().getRootContext(),
+						this,
+						highLoad
+							? 5_000L
+							: 30_000L);
 			}
 		}
 	}
-	
+
 	@Override
 	public void start() {
-		
+
 		this.destroyed = false;
-		Act.later(this.server.getServer().getRootContext(), this, 10000L);
+		Act.later(this.server.getServer().getRootContext(), this, 10_000L);
 	}
-	
+
 	@Override
 	public void stop() {
-		
+
 		this.destroyed = true;
 	}
-	
+
 	@Override
 	public String toString() {
-		
+
 		return "Runner change update {server=" + this.server + "}";
 	}
 }

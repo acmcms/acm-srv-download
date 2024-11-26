@@ -23,23 +23,17 @@ import ru.myx.ae3.help.Convert;
 import ru.myx.ae3.report.Report;
 import ru.myx.ae3.xml.Xml;
 
-/**
- * @author myx
- * 
- *         Window - Preferences - Java - Code Style - Code Templates
- */
+/** @author myx
+ *
+ *         Window - Preferences - Java - Code Style - Code Templates */
 public final class RecFolder {
 	
-	
-	/**
-	 * @param conn
+	/** @param conn
 	 * @param srcLuid
 	 * @param parentLuid
 	 * @param name
-	 * @throws SQLException
-	 */
+	 * @throws SQLException */
 	public static final void create(final Connection conn, final int srcLuid, final int parentLuid, final String name) throws SQLException {
-		
 		
 		try (final PreparedStatement ps = conn.prepareStatement("INSERT INTO d1Folders(srcLuid,fldParentLuid,fldName,fldCreated,fldChecked,fldCrc) VALUES (?,?,?,?,?,?)")) {
 			ps.setInt(1, srcLuid);
@@ -56,24 +50,25 @@ public final class RecFolder {
 			Report.info("DLC_FOLDER", "Folder created, name=" + name);
 		}
 	}
-
+	
 	private final DownloadClient client;
-
+	
 	private final int luid;
-
+	
 	private final int srcLuid;
-
+	
 	private final int parentLuid;
-
+	
 	private final String name;
-
+	
 	private final long checked;
-
+	
 	private RecFolder parent;
-
+	
 	private RecSource source;
-
+	
 	RecFolder(final DownloadClient client, final int luid, final int srcLuid, final int parentLuid, final String name, final long checked) {
+		
 		this.client = client;
 		this.luid = luid;
 		this.srcLuid = srcLuid;
@@ -81,22 +76,19 @@ public final class RecFolder {
 		this.name = name;
 		this.checked = checked;
 	}
-
-	/**
-	 * @param conn
-	 * @throws SQLException
-	 */
+	
+	/** @param conn
+	 * @throws SQLException */
 	public void check(final Connection conn) throws SQLException {
 		
-		
-		if (this.checked + 10 * 1000L * 60L > Engine.fastTime()) {
+		if (this.checked + 10 * 60_000L > Engine.fastTime()) {
 			return;
 		}
 		final String url = this.getPathIndexing() + "@listing.xml";
 		final String response;
 		try {
 			final ExecProcess ctx = Exec.createProcess(null, url);
-
+			
 			if (true) {
 				// final BaseFunction function = Base.createFunction("url",
 				// "return require('http').get.asString(url) || '';");
@@ -210,74 +202,53 @@ public final class RecFolder {
 			}
 		}
 	}
-
-	/**
-	 * @return files
-	 */
+	
+	/** @return files */
 	public final Map<String, RecFile> getFiles() {
-		
 		
 		final RequestSubFiles request = new RequestSubFiles(this.client, this.luid);
 		this.client.getLoader().add(request);
 		return request.baseValue();
 	}
-
-	/**
-	 * @return folders
-	 */
+	
+	/** @return folders */
 	public final Map<String, RecFolder> getFolders() {
-		
 		
 		final RequestSubFolders request = new RequestSubFolders(this.client, this.luid, this.srcLuid);
 		this.client.getLoader().add(request);
 		return request.baseValue();
 	}
-
-	/**
-	 * @return int
-	 */
+	
+	/** @return int */
 	public final int getLuid() {
-		
 		
 		return this.luid;
 	}
-
-	/**
-	 * @return string
-	 */
+	
+	/** @return string */
 	public final String getName() {
-		
 		
 		return this.name;
 	}
-
-	/**
-	 * @return folder
-	 */
+	
+	/** @return folder */
 	public final RecFolder getParent() {
-		
 		
 		if (this.parent == null) {
 			this.parent = this.client.getFolder(this.parentLuid);
 		}
 		return this.parent;
 	}
-
-	/**
-	 * @return int
-	 */
+	
+	/** @return int */
 	public final int getParentLuid() {
-		
 		
 		return this.parentLuid;
 	}
-
-	/**
-	 * @return string
-	 * @throws SQLException
-	 */
+	
+	/** @return string
+	 * @throws SQLException */
 	public final String getPath() throws SQLException {
-		
 		
 		final RecFolder parent = this.getParent();
 		if (parent == null) {
@@ -286,13 +257,10 @@ public final class RecFolder {
 		}
 		return parent.getPath() + this.name + '/';
 	}
-
-	/**
-	 * @return string
-	 * @throws SQLException
-	 */
+	
+	/** @return string
+	 * @throws SQLException */
 	public final String getPathIndexing() throws SQLException {
-		
 		
 		final RecFolder parent = this.getParent();
 		if (parent == null) {
@@ -301,13 +269,10 @@ public final class RecFolder {
 		}
 		return parent.getPathIndexing() + this.name + '/';
 	}
-
-	/**
-	 * @return string
-	 * @throws SQLException
-	 */
+	
+	/** @return string
+	 * @throws SQLException */
 	public final String getPathLocal() throws SQLException {
-		
 		
 		final RecFolder parent = this.getParent();
 		if (parent == null) {
@@ -316,31 +281,24 @@ public final class RecFolder {
 		}
 		return parent.getPathLocal() + this.name + '/';
 	}
-
-	/**
-	 * @return source
-	 */
+	
+	/** @return source */
 	public final RecSource getSource() {
-		
 		
 		if (this.source == null) {
 			this.source = this.client.getSource(this.srcLuid);
 		}
 		return this.source;
 	}
-
-	/**
-	 * @return int
-	 */
+	
+	/** @return int */
 	public final int getSourceLuid() {
-		
 		
 		return this.srcLuid;
 	}
-
+	
 	@Override
 	public final String toString() {
-		
 		
 		return "FOLDER{ luid=" + this.luid + ", name=" + this.name + " }";
 	}

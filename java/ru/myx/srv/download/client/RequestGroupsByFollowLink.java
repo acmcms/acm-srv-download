@@ -16,25 +16,23 @@ import ru.myx.ae3.help.Text;
 import ru.myx.jdbc.queueing.RequestAttachment;
 import ru.myx.jdbc.queueing.RunnerDatabaseRequestor;
 
-/**
- * @author myx
- *
- */
+/** @author myx */
 final class RequestGroupsByFollowLink extends RequestAttachment<RecFileGroup[], RunnerDatabaseRequestor> implements CreationHandlerObject<RunnerDatabaseRequestor, RecFileGroup[]> {
-
+	
 	private final DownloadClient parent;
-
+	
 	private final String key;
-
+	
 	private final String link;
-
+	
 	private final String typeFilter;
-
+	
 	private final boolean described;
-
+	
 	private final String query;
-
+	
 	RequestGroupsByFollowLink(final String key, final DownloadClient parent, final String link, final String typeFilter, final boolean all, final boolean described) {
+		
 		this.parent = parent;
 		this.key = key;
 		this.link = link;
@@ -66,20 +64,13 @@ final class RequestGroupsByFollowLink extends RequestAttachment<RecFileGroup[], 
 		query.append(" ORDER BY i.itmName ASC, s.srcReady DESC");
 		this.query = query.toString();
 	}
-
-	@Override
-	public RecFileGroup[] create(final RunnerDatabaseRequestor attachment, final String key) {
-
-		attachment.add(this);
-		return this.baseValue();
-	}
-
+	
 	@Override
 	public final RecFileGroup[] apply(final RunnerDatabaseRequestor ctx) {
-
+		
 		final Map<String, RecFileGroup> lookup = Create.tempMap();
 		final List<RecFileGroup> pending = new ArrayList<>();
-
+		
 		try (final PreparedStatement ps = ctx.ctxGetConnection().prepareStatement(this.query, ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)) {
 			int index = 1;
 			ps.setString(index++, this.link);
@@ -137,21 +128,28 @@ final class RequestGroupsByFollowLink extends RequestAttachment<RecFileGroup[], 
 		} catch (final SQLException e) {
 			throw new RuntimeException(this.getClass().getSimpleName(), e);
 		}
-
+		
 		final RecFileGroup[] result = pending.toArray(new RecFileGroup[pending.size()]);
 		this.setResult(result);
 		return result;
 	}
-
+	
+	@Override
+	public RecFileGroup[] create(final RunnerDatabaseRequestor attachment, final String key) {
+		
+		attachment.add(this);
+		return this.baseValue();
+	}
+	
 	@Override
 	public final String getKey() {
-
+		
 		return this.key;
 	}
-
+	
 	@Override
 	public long getTTL() {
-
-		return 10L * 1000L * 60L;
+		
+		return 10L * 60_000L;
 	}
 }

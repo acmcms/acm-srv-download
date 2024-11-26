@@ -41,20 +41,20 @@ import ru.myx.ae3.xml.Xml;
  *
  *         Window - Preferences - Java - Code Style - Code Templates */
 class Share {
-	
+
 	private static final Describer DESCRIBER_DEFAULT = new DescriberDefault();
-	
+
 	private static final FileFilter FILE_FILTER = new FileFilter() {
-		
+
 		@Override
 		public final boolean accept(final File pathname) {
-			
+
 			return !pathname.isHidden() && pathname.getName().charAt(0) != '.' && !pathname.getName().equals("CVS");
 		}
 	};
-	
+
 	private static String calcCrc(final File file) throws Exception {
-		
+
 		if (file.length() == 0) {
 			return "*";
 		}
@@ -76,9 +76,9 @@ class Share {
 			return "*";
 		}
 	}
-	
+
 	private static final Map<String, BaseObject> getMapsMap(final BaseArray maps) {
-		
+
 		final Map<String, BaseObject> result = Create.tempMap();
 		if (maps != null) {
 			final int length = maps.length();
@@ -90,9 +90,9 @@ class Share {
 		}
 		return result;
 	}
-	
+
 	private static final Set<String> getNames(final BaseArray maps) {
-		
+
 		final Set<String> result = Create.tempSet();
 		if (maps != null) {
 			final int length = maps.length();
@@ -104,9 +104,9 @@ class Share {
 		}
 		return result;
 	}
-	
+
 	private static final Map<?, ?> makeTypeMap(final BaseObject settings) {
-		
+
 		final Map<String, Object> types = new HashMap<>();
 		types.put("txt", new DescriberText());
 		types.put("text", new DescriberText());
@@ -134,27 +134,27 @@ class Share {
 		types.put("zip", new DescriberArchiveZip());
 		return types;
 	}
-	
-	private final String name;
-	
-	private final File root;
-	
-	private final File cache1;
-	
-	private final File cache2;
-	
-	private final File queue;
-	
-	private final Checker checker;
-	
-	private final Traffic traffic;
-	
-	private File queueCurrent;
-	
-	private final Map<?, ?> types;
-	
-	Share(final DownloadServer parent, final String name, final File root, final BaseObject settings) {
 
+	private final String name;
+
+	private final File root;
+
+	private final File cache1;
+
+	private final File cache2;
+
+	private final File queue;
+
+	private final Checker checker;
+
+	private final Traffic traffic;
+
+	private File queueCurrent;
+
+	private final Map<?, ?> types;
+
+	Share(final DownloadServer parent, final String name, final File root, final BaseObject settings) {
+		
 		this.name = name;
 		this.root = root;
 		final File dlsRoot = new File(root, ".dls_cache");
@@ -175,127 +175,9 @@ class Share {
 		}
 		this.types = Share.makeTypeMap(settings);
 	}
-	
-	/** @throws Exception
-	 */
-	@SuppressWarnings("resource")
-	public void check() throws Exception {
-		
-		synchronized (this.queueCurrent) {
-			if (this.queueCurrent.exists()) {
-				this.queueCurrent = new File(this.queue, "q" + Engine.fastTime() + ".queue");
-			}
-		}
-		final File queueCurrent = this.queueCurrent;
-		final File[] queues = this.queue.listFiles(new FileFilter() {
-			
-			@Override
-			public final boolean accept(final File pathname) {
-				
-				return pathname != queueCurrent;
-			}
-		});
-		if (queues != null && queues.length > 0) {
-			final File queue = queues[Engine.createRandom(queues.length)];
-			try (final DataInputStream in = new DataInputStream(new FileInputStream(queue))) {
-				final List<String> todo = new ArrayList<>();
-				try {
-					for (;;) {
-						final String line = in.readUTF();
-						if (line == null) {
-							break;
-						}
-						if (!todo.contains(line)) {
-							todo.add(line);
-						}
-					}
-				} catch (final EOFException e) {
-					// ignore
-				}
-				if (!todo.isEmpty()) {
-					Collections.shuffle(todo);
-				}
-				for (final String line : todo) {
-					final File source = new File(this.root, line);
-					if (source.isFile()) {
-						final String name = source.getName();
-						final int pos = name.lastIndexOf('.');
-						if (pos != -1) {
-							final String typeName = name.substring(pos + 1).toLowerCase();
-							final Describer describer = (Describer) Convert.MapEntry.toObject(this.types, typeName, Share.DESCRIBER_DEFAULT);
-							if (describer != null && describer.isThumbnailAvailable()) {
-								final File target1 = new File(this.cache1, line);
-								target1.getParentFile().mkdirs();
-								if (describer.isPreviewAvailable()) {
-									final File target2 = new File(this.cache2, line);
-									if (!target1.exists() || target1.length() > 0 && !target2.exists()) {
-										final TransferCollector collector1 = target1.exists()
-											? null
-											: Transfer.createCollector();
-										final TransferCollector collector2 = target2.exists()
-											? null
-											: Transfer.createCollector();
-										final long timeout = 120L * 1000L * source.length() / (1000L * 1000L) + 60L * 1000L;
-										final HungDetector detector = new HungDetector(timeout, target1);
-										describer.buildTemporaryFiles(source, collector1, collector2);
-										detector.done = true;
-										if (collector1 != null) {
-											collector1.close();
-											Transfer.toStream(collector1.toBuffer(), new FileOutputStream(target1), true);
-										}
-										if (collector2 != null) {
-											collector2.close();
-											Transfer.toStream(collector2.toBuffer(), new FileOutputStream(target2), true);
-										}
-										new File(target1.getParentFile(), ".date").delete();
-									}
-								} else {
-									if (!target1.exists()) {
-										final TransferCollector collector = Transfer.createCollector();
-										final long timeout = 60L * 1000L * source.length() / (1000L * 1000L) + 30L * 1000L;
-										final HungDetector detector = new HungDetector(timeout, target1);
-										describer.buildTemporaryFiles(source, collector, null);
-										detector.done = true;
-										collector.close();
-										Transfer.toStream(collector.toBuffer(), new FileOutputStream(target1), true);
-										new File(target1.getParentFile(), ".date").delete();
-									}
-								}
-							}
-						}
-					}
-				}
-			} catch (final Throwable t) {
-				Report.exception("DLS/SHARE", "While exhausting queue", t);
-			}
-			queue.delete();
-		}
-	}
-	
-	/** @param query
-	 * @return answer */
-	public final ReplyAnswer checkAccess(final ServeRequest query) {
-		
-		if (this.checker == null) {
-			return null;
-		}
-		return this.checker.check(query);
-	}
-	
-	/** @return file */
-	public File getCache1() {
-		
-		return this.cache1;
-	}
-	
-	/** @return file */
-	public File getCache2() {
-		
-		return this.cache2;
-	}
-	
+
 	private BaseObject getFolders(final BaseObject result, final File folder, final File cache1, final File cache2) throws Exception {
-		
+
 		final File checked = new File(cache1, ".date");
 		final File index = new File(cache1, ".index");
 		final BaseObject indexData;
@@ -303,7 +185,7 @@ class Share {
 			BaseObject xmlData;
 			try {
 				xmlData = Xml.toBase("getFolders", Transfer.createCopier(index), StandardCharsets.UTF_8, null, null, null);
-				if (checked.lastModified() + 5 * 1000L * 60L > Engine.fastTime()) {
+				if (checked.lastModified() + 5 * 60_000L > Engine.fastTime()) {
 					result.baseDefineImportAllEnumerable(xmlData);
 					return result;
 				}
@@ -438,12 +320,128 @@ class Share {
 		result.baseDefineImportAllEnumerable(indexData);
 		return result;
 	}
-	
+
+	/** @throws Exception */
+	@SuppressWarnings("resource")
+	public void check() throws Exception {
+
+		synchronized (this.queueCurrent) {
+			if (this.queueCurrent.exists()) {
+				this.queueCurrent = new File(this.queue, "q" + Engine.fastTime() + ".queue");
+			}
+		}
+		final File queueCurrent = this.queueCurrent;
+		final File[] queues = this.queue.listFiles(new FileFilter() {
+
+			@Override
+			public final boolean accept(final File pathname) {
+
+				return pathname != queueCurrent;
+			}
+		});
+		if (queues != null && queues.length > 0) {
+			final File queue = queues[Engine.createRandom(queues.length)];
+			try (final DataInputStream in = new DataInputStream(new FileInputStream(queue))) {
+				final List<String> todo = new ArrayList<>();
+				try {
+					for (;;) {
+						final String line = in.readUTF();
+						if (line == null) {
+							break;
+						}
+						if (!todo.contains(line)) {
+							todo.add(line);
+						}
+					}
+				} catch (final EOFException e) {
+					// ignore
+				}
+				if (!todo.isEmpty()) {
+					Collections.shuffle(todo);
+				}
+				for (final String line : todo) {
+					final File source = new File(this.root, line);
+					if (source.isFile()) {
+						final String name = source.getName();
+						final int pos = name.lastIndexOf('.');
+						if (pos != -1) {
+							final String typeName = name.substring(pos + 1).toLowerCase();
+							final Describer describer = (Describer) Convert.MapEntry.toObject(this.types, typeName, Share.DESCRIBER_DEFAULT);
+							if (describer != null && describer.isThumbnailAvailable()) {
+								final File target1 = new File(this.cache1, line);
+								target1.getParentFile().mkdirs();
+								if (describer.isPreviewAvailable()) {
+									final File target2 = new File(this.cache2, line);
+									if (!target1.exists() || target1.length() > 0 && !target2.exists()) {
+										final TransferCollector collector1 = target1.exists()
+											? null
+											: Transfer.createCollector();
+										final TransferCollector collector2 = target2.exists()
+											? null
+											: Transfer.createCollector();
+										final long timeout = 120L * 1000L * source.length() / (1000L * 1000L) + 60_000L;
+										final HungDetector detector = new HungDetector(timeout, target1);
+										describer.buildTemporaryFiles(source, collector1, collector2);
+										detector.done = true;
+										if (collector1 != null) {
+											collector1.close();
+											Transfer.toStream(collector1.toBuffer(), new FileOutputStream(target1), true);
+										}
+										if (collector2 != null) {
+											collector2.close();
+											Transfer.toStream(collector2.toBuffer(), new FileOutputStream(target2), true);
+										}
+										new File(target1.getParentFile(), ".date").delete();
+									}
+								} else {
+									if (!target1.exists()) {
+										final TransferCollector collector = Transfer.createCollector();
+										final long timeout = 60L * 1000L * source.length() / (1000L * 1000L) + 30_000L;
+										final HungDetector detector = new HungDetector(timeout, target1);
+										describer.buildTemporaryFiles(source, collector, null);
+										detector.done = true;
+										collector.close();
+										Transfer.toStream(collector.toBuffer(), new FileOutputStream(target1), true);
+										new File(target1.getParentFile(), ".date").delete();
+									}
+								}
+							}
+						}
+					}
+				}
+			} catch (final Throwable t) {
+				Report.exception("DLS/SHARE", "While exhausting queue", t);
+			}
+			queue.delete();
+		}
+	}
+
+	/** @param query
+	 * @return answer */
+	public final ReplyAnswer checkAccess(final ServeRequest query) {
+
+		if (this.checker == null) {
+			return null;
+		}
+		return this.checker.check(query);
+	}
+
+	/** @return file */
+	public File getCache1() {
+
+		return this.cache1;
+	}
+
+	/** @return file */
+	public File getCache2() {
+
+		return this.cache2;
+	}
+
 	/** @param result
-	 * @param path
-	 */
+	 * @param path */
 	public void getFolders(final BaseObject result, final String path) {
-		
+
 		final File folder = new File(this.root, path);
 		if (folder.isDirectory()) {
 			final File cache1 = new File(this.cache1, path);
@@ -468,22 +466,22 @@ class Share {
 			result.baseDefine("type", "no_path");
 		}
 	}
-	
+
 	/** @return file */
 	public File getRoot() {
-		
+
 		return this.root;
 	}
-	
+
 	/** @return traffic */
 	public Traffic getTrafficDownload() {
-		
+
 		return this.traffic;
 	}
-	
+
 	@Override
 	public String toString() {
-		
+
 		return "DLS/SHARE{ name=" + this.name + ", root=" + this.root + " }";
 	}
 }

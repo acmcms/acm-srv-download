@@ -4,18 +4,20 @@
 package ru.myx.srv.download;
 
 final class TaskRestarter implements Runnable {
+	
 	@Override
 	public void run() {
+		
 		try {
-			Runtime.getRuntime().exit( -27 );
+			Runtime.getRuntime().exit(-27);
 		} catch (final Throwable t) {
 			t.printStackTrace();
 			try {
-				Thread.sleep( 20000L );
+				Thread.sleep(20_000L);
 			} catch (final InterruptedException ie) {
 				// ignore
 			}
-			Runtime.getRuntime().halt( -28 );
+			Runtime.getRuntime().halt(-28);
 		}
 	}
 }

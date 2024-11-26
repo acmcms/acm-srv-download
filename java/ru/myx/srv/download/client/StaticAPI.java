@@ -23,18 +23,18 @@ import ru.myx.ae3.report.Report;
  *
  *         Window - Preferences - Java - Code Style - Code Templates */
 public class StaticAPI {
-	
-	private final DownloadClient client;
 
+	private final DownloadClient client;
+	
 	StaticAPI(final DownloadClient client) {
-		
+
 		this.client = client;
 	}
-
+	
 	/** @param name
 	 * @throws Exception */
 	public void ensureKnown(final String name) throws Exception {
-		
+
 		try (final Connection conn = this.client.nextConnection()) {
 			if (conn == null) {
 				throw new RuntimeException("No connection!");
@@ -91,7 +91,7 @@ public class StaticAPI {
 							try (final PreparedStatement ps = conn.prepareStatement("INSERT INTO d1Queue(queFormation,queBusy,queQueued,queText,queHint) VALUES (?,?,?,?,?)")) {
 								ps.setString(1, name.toLowerCase());
 								ps.setTimestamp(2, new Timestamp(0L));
-								ps.setTimestamp(3, new Timestamp(Engine.fastTime() - 1000L * 60L * 60L * 24L * 7L * 58));
+								ps.setTimestamp(3, new Timestamp(Engine.fastTime() - 60_000L * 60L * 24L * 7L * 58));
 								ps.setBytes(4, "".getBytes(StandardCharsets.UTF_8));
 								ps.setString(5, "divided");
 								ps.execute();
@@ -99,7 +99,7 @@ public class StaticAPI {
 						} else {
 							try (final PreparedStatement ps = conn.prepareStatement("UPDATE d1Queue SET queText=?, queQueued=? WHERE queFormation=?")) {
 								ps.setBytes(1, "".getBytes(StandardCharsets.UTF_8));
-								ps.setTimestamp(2, new Timestamp(Engine.fastTime() - 1000L * 60L * 60L * 24L * 7L * 58));
+								ps.setTimestamp(2, new Timestamp(Engine.fastTime() - 60_000L * 60L * 24L * 7L * 58));
 								ps.setString(3, name.toLowerCase());
 								ps.execute();
 							}
@@ -110,12 +110,12 @@ public class StaticAPI {
 			conn.commit();
 		}
 	}
-
+	
 	/** @param alias
 	 * @return alias
 	 * @throws Exception */
 	public RecAlias getAlias(final String alias) throws Exception {
-		
+
 		try (final Connection conn = this.client.nextConnection()) {
 			if (conn == null) {
 				throw new RuntimeException("Connection unavailable!");
@@ -142,33 +142,33 @@ public class StaticAPI {
 			return null;
 		}
 	}
-
+	
 	/** @return alias array
 	 * @throws Exception */
 	public RecAlias[] getAliases() throws Exception {
-		
+
 		return this.client.searchAliasesByFollowLink(null);
 	}
-
+	
 	/** @param guid
 	 * @return file */
 	public RecFile getItemByGuid(final String guid) {
-		
+
 		return this.client.searchByGuid(guid);
 	}
-
+	
 	/** @return known array
 	 * @throws Exception */
 	public RecKnown[] getKnown() throws Exception {
-		
+
 		return this.client.getKnownByAlias(null);
 	}
-
+	
 	/** @param name
 	 * @return string
 	 * @throws SQLException */
 	public String getKnown(final String name) throws SQLException {
-		
+
 		final Connection conn = this.client.nextConnection();
 		if (conn == null) {
 			throw new RuntimeException("No connection!");
@@ -191,19 +191,19 @@ public class StaticAPI {
 			}
 		}
 	}
-
+	
 	/** @param followLink
 	 * @return known
 	 * @throws Exception */
 	public RecKnown getKnownByFollowLink(final String followLink) throws Exception {
-		
+
 		return this.client.getKnownByFollowLink(followLink);
 	}
-
+	
 	/** @return int
 	 * @throws SQLException */
 	public int getL1KnownAliasCount() throws SQLException {
-		
+
 		try (final Connection conn = this.client.nextConnection()) {
 			if (conn == null) {
 				throw new RuntimeException("No connection!");
@@ -218,11 +218,11 @@ public class StaticAPI {
 			}
 		}
 	}
-
+	
 	/** @return int
 	 * @throws SQLException */
 	public int getL1KnownCount() throws SQLException {
-		
+
 		try (final Connection conn = this.client.nextConnection()) {
 			if (conn == null) {
 				throw new RuntimeException("No connection!");
@@ -237,11 +237,11 @@ public class StaticAPI {
 			}
 		}
 	}
-
+	
 	/** @return int
 	 * @throws SQLException */
 	public int getL1UnknownCount() throws SQLException {
-		
+
 		try (final Connection conn = this.client.nextConnection()) {
 			if (conn == null) {
 				throw new RuntimeException("No connection!");
@@ -256,11 +256,11 @@ public class StaticAPI {
 			}
 		}
 	}
-
+	
 	/** @return int
 	 * @throws SQLException */
 	public int getNextQueued() throws SQLException {
-		
+
 		try (final Connection conn = this.client.nextConnection()) {
 			if (conn == null) {
 				throw new RuntimeException("No connection!");
@@ -270,7 +270,7 @@ public class StaticAPI {
 					ResultSet.TYPE_FORWARD_ONLY,
 					ResultSet.CONCUR_READ_ONLY)) {
 				ps.setMaxRows(1);
-				ps.setTimestamp(1, new Timestamp(Engine.fastTime() - 5L * 1000L * 60L));
+				ps.setTimestamp(1, new Timestamp(Engine.fastTime() - 5L * 60_000L));
 				try (final ResultSet rs = ps.executeQuery()) {
 					if (rs.next()) {
 						return rs.getInt(1);
@@ -280,11 +280,11 @@ public class StaticAPI {
 			}
 		}
 	}
-
+	
 	/** @return queues array
 	 * @throws Exception */
 	public RecQueued[] getQueue() throws Exception {
-		
+
 		try (final Connection conn = this.client.nextConnection()) {
 			if (conn == null) {
 				throw new RuntimeException("No connection!");
@@ -293,7 +293,7 @@ public class StaticAPI {
 					"SELECT queLuid,queFormation,queText,queHint FROM d1Queue WHERE queBusy<? ORDER BY 2 ASC",
 					ResultSet.TYPE_FORWARD_ONLY,
 					ResultSet.CONCUR_READ_ONLY)) {
-				ps.setTimestamp(1, new Timestamp(Engine.fastTime() - 5L * 1000L * 60L));
+				ps.setTimestamp(1, new Timestamp(Engine.fastTime() - 5L * 60_000L));
 				try (final ResultSet rs = ps.executeQuery()) {
 					final List<RecQueued> result = new ArrayList<>();
 					while (rs.next()) {
@@ -304,12 +304,12 @@ public class StaticAPI {
 			}
 		}
 	}
-
+	
 	/** @param luid
 	 * @return queued
 	 * @throws Exception */
 	public RecQueued getQueued(final int luid) throws Exception {
-		
+
 		try (final Connection conn = this.client.nextConnection()) {
 			if (conn == null) {
 				throw new RuntimeException("No connection!");
@@ -327,18 +327,18 @@ public class StaticAPI {
 			}
 		}
 	}
-
+	
 	/** @param all
 	 * @return sources */
 	public RecSource[] getSources(final boolean all) {
-		
+
 		return this.client.getSources(all);
 	}
-
+	
 	/** @return file array
 	 * @throws Exception */
 	public RecFile[] getUndescribedItems() throws Exception {
-		
+
 		try (final Connection conn = this.client.nextConnection()) {
 			if (conn == null) {
 				throw new RuntimeException("Connection unavailable!");
@@ -386,7 +386,7 @@ public class StaticAPI {
 			}
 		}
 	}
-
+	
 	/** @param limit
 	 * @param all
 	 * @param timeout
@@ -396,58 +396,58 @@ public class StaticAPI {
 	 * @param filter
 	 * @return file array */
 	public List<RecFile> search(final int limit, final boolean all, final long timeout, final String sort, final long dateStart, final long dateEnd, final String filter) {
-		
+
 		if (filter == null || filter.isBlank()) {
 			return null;
 		}
 		return this.client.search(limit, all, timeout, sort, dateStart, dateEnd, filter);
 	}
-
+	
 	/** @param alias
 	 * @return file array */
 	public RecFile[] searchByAlias(final String alias) {
-		
+
 		if (alias == null) {
 			return null;
 		}
 		return this.client.searchFilesByAlias(alias, null, false);
 	}
-
+	
 	/** @param guid
 	 * @return file array */
 	public RecFile[] searchByFollowLink(final String guid) {
-		
+
 		if (guid == null) {
 			return null;
 		}
 		return this.client.searchFilesByFollowLink(guid, null, false);
 	}
-
+	
 	/** @param guid
 	 * @param type
 	 * @return file array */
 	public RecFile[] searchByFollowLinkAndType(final String guid, final String type) {
-		
+
 		if (guid == null) {
 			return null;
 		}
 		return this.client.searchFilesByFollowLink(guid, type, false);
 	}
-
+	
 	/** @param md5
 	 * @return file array */
 	public RecFile[] searchByMd5(final String md5) {
-		
+
 		if (md5 == null) {
 			return null;
 		}
 		return this.client.searchByMd5(md5, null, false);
 	}
-
+	
 	/** @param name
 	 * @return file array */
 	public RecFile[] searchByName(final String name) {
-		
+
 		if (name == null) {
 			return null;
 		}
@@ -457,12 +457,12 @@ public class StaticAPI {
 		}
 		return this.client.searchByName(name.substring(pos + 1), null, false);
 	}
-
+	
 	/** @param name
 	 * @param type
 	 * @return file array */
 	public RecFile[] searchByNameAndType(final String name, final String type) {
-		
+
 		if (name == null) {
 			return null;
 		}
@@ -472,138 +472,138 @@ public class StaticAPI {
 		}
 		return this.client.searchByName(name.substring(pos + 1), type, false);
 	}
-
+	
 	/** @param alias
 	 * @return group array */
 	public RecFileGroup[] searchFileGroupsByAlias(final String alias) {
-		
+
 		if (alias == null) {
 			return null;
 		}
 		return this.client.searchFileGroupsByAlias(alias, null, false);
 	}
-
+	
 	/** @param guid
 	 * @param type
 	 * @return group array */
 	public RecFileGroup[] searchFileGroupsByAliasAndType(final String guid, final String type) {
-		
+
 		if (guid == null) {
 			return null;
 		}
 		return this.client.searchFileGroupsByAlias(guid, type, false);
 	}
-
+	
 	/** @param guid
 	 * @return group array */
 	public RecFileGroup[] searchFileGroupsByFollowLink(final String guid) {
-		
+
 		if (guid == null) {
 			return null;
 		}
 		return this.client.searchFileGroupsByFollowLink(guid, null, false, false);
 	}
-
+	
 	/** @param guid
 	 * @param listable
 	 * @return group array */
 	public RecFileGroup[] searchFileGroupsByFollowLink(final String guid, final boolean listable) {
-		
+
 		if (guid == null) {
 			return null;
 		}
 		return this.client.searchFileGroupsByFollowLink(guid, null, false, listable);
 	}
-
+	
 	/** @param guid
 	 * @param type
 	 * @return group array */
 	public RecFileGroup[] searchFileGroupsByFollowLinkAndType(final String guid, final String type) {
-		
+
 		if (guid == null) {
 			return null;
 		}
 		return this.client.searchFileGroupsByFollowLink(guid, type, false, false);
 	}
-
+	
 	/** @param guid
 	 * @param type
 	 * @param listable
 	 * @return group array */
 	public RecFileGroup[] searchFileGroupsByFollowLinkAndType(final String guid, final String type, final boolean listable) {
-		
+
 		if (guid == null) {
 			return null;
 		}
 		return this.client.searchFileGroupsByFollowLink(guid, type, false, listable);
 	}
-
+	
 	/** @param alias
 	 * @return group array */
 	public RecFileGroup[] searchFileVariantsByAlias(final String alias) {
-		
+
 		if (alias == null) {
 			return null;
 		}
 		return this.client.searchFileVariantsByAlias(alias, null, false);
 	}
-
+	
 	/** @param guid
 	 * @param type
 	 * @return group array */
 	public RecFileGroup[] searchFileVariantsByAliasAndType(final String guid, final String type) {
-		
+
 		if (guid == null) {
 			return null;
 		}
 		return this.client.searchFileVariantsByAlias(guid, type, false);
 	}
-
+	
 	/** @param guid
 	 * @return group array */
 	public RecFileGroup[] searchFileVariantsByFollowLink(final String guid) {
-		
+
 		if (guid == null) {
 			return null;
 		}
 		return this.client.searchFileVariantsByFollowLink(guid, null, false);
 	}
-
+	
 	/** @param guid
 	 * @param type
 	 * @return group array */
 	public RecFileGroup[] searchFileVariantsByFollowLinkAndType(final String guid, final String type) {
-		
+
 		if (guid == null) {
 			return null;
 		}
 		return this.client.searchFileVariantsByFollowLink(guid, type, false);
 	}
-
+	
 	/** @param names
 	 * @return known array */
 	public RecKnown[] searchKnown(final String names) {
-		
+
 		if (names == null) {
 			return null;
 		}
 		return this.client.searchKnown(names.trim());
 	}
-
+	
 	/** @param md5
 	 * @param description
 	 * @throws Exception */
 	public void setItemDescription(final String md5, final String description) throws Exception {
-		
+
 		this.setItemDescription(md5, description, false);
 	}
-
+	
 	/** @param md5
 	 * @param description
 	 * @param hidden
 	 * @throws Exception */
 	public void setItemDescription(final String md5, final String description, final boolean hidden) throws Exception {
-		
+
 		try (final Connection conn = this.client.nextConnection()) {
 			if (conn == null) {
 				throw new RuntimeException("Connection unavailable!");
@@ -632,12 +632,12 @@ public class StaticAPI {
 			conn.commit();
 		}
 	}
-
+	
 	/** @param name
 	 * @param text
 	 * @throws Exception */
 	public void setQueued(final String name, final String text) throws Exception {
-		
+
 		try (final Connection conn = this.client.nextConnection()) {
 			if (conn == null) {
 				throw new RuntimeException("No connection!");
@@ -657,7 +657,7 @@ public class StaticAPI {
 				try (final PreparedStatement ps = conn.prepareStatement("INSERT INTO d1Queue(queFormation,queBusy,queQueued,queText,queHint) VALUES (?,?,?,?,?)")) {
 					ps.setString(1, name.toLowerCase());
 					ps.setTimestamp(2, new Timestamp(0L));
-					ps.setTimestamp(3, new Timestamp(Engine.fastTime() - 1000L * 60L * 60L * 24L * 7L * 58));
+					ps.setTimestamp(3, new Timestamp(Engine.fastTime() - 60_000L * 60L * 24L * 7L * 58));
 					ps.setBytes(4, text.getBytes(StandardCharsets.UTF_8));
 					ps.setString(5, "setQueue( text )");
 					ps.execute();
@@ -665,24 +665,24 @@ public class StaticAPI {
 			} else {
 				try (final PreparedStatement ps = conn.prepareStatement("UPDATE d1Queue SET queText=?, queQueued=? WHERE queFormation=?")) {
 					ps.setBytes(1, text.getBytes(StandardCharsets.UTF_8));
-					ps.setTimestamp(2, new Timestamp(Engine.fastTime() - 1000L * 60L * 60L * 24L * 7L * 58));
+					ps.setTimestamp(2, new Timestamp(Engine.fastTime() - 60_000L * 60L * 24L * 7L * 58));
 					ps.setString(3, name.toLowerCase());
 					ps.execute();
 				}
 			}
 		}
 	}
-
+	
 	/** @throws Exception */
 	public final void shiftQueue() throws Exception {
-		
+
 		try (final Connection conn = this.client.nextConnection()) {
 			try (final PreparedStatement ps = conn.prepareStatement("UPDATE d1Queue SET queQueued=queQueued+?")) {
-				ps.setTimestamp(1, new Timestamp(1000L * 60L * 60L * 24L * 365));
+				ps.setTimestamp(1, new Timestamp(60_000L * 60L * 24L * 365));
 				ps.execute();
 			}
 			try (final PreparedStatement ps = conn.prepareStatement("UPDATE d1Queue SET queQueued=? WHERE queQueued<?")) {
-				final Timestamp shiftPeriod = new Timestamp(Engine.fastTime() + 1000L * 60L * 60L * 24L * 7L * 2);
+				final Timestamp shiftPeriod = new Timestamp(Engine.fastTime() + 60_000L * 60L * 24L * 7L * 2);
 				ps.setTimestamp(1, shiftPeriod);
 				ps.setTimestamp(2, shiftPeriod);
 				ps.execute();
