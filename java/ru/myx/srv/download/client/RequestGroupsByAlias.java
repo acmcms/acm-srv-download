@@ -15,30 +15,31 @@ import ru.myx.ae3.help.Text;
 import ru.myx.jdbc.queueing.RequestAttachment;
 import ru.myx.jdbc.queueing.RunnerDatabaseRequestor;
 
-/**
- * @author myx
- *
- */
+/** @author myx */
 final class RequestGroupsByAlias extends RequestAttachment<RecFileGroup[], RunnerDatabaseRequestor> {
-
+	
 	private final DownloadClient parent;
-
+	
 	private final String key;
-
+	
 	private final String filter;
-
+	
 	private final String typeFilter;
-
+	
 	private final String query;
-
+	
 	RequestGroupsByAlias(final DownloadClient parent, final String key, final String filter, final String typeFilter, final boolean all) {
+		
 		this.parent = parent;
 		this.key = key;
 		this.filter = filter;
 		this.typeFilter = typeFilter;
 		final StringBuilder query = new StringBuilder();
-		query.append(
-				"SELECT DISTINCT i.itmGuid,i.itmCrc,i.itmLuid,i.fldLuid,i.itmName,i.itmSize,i.itmDate,i.itmType,i.itmComment,i.itmPreview,i.itmLevel2Name,i.itmLevel3Name FROM d1Items i, d1Folders f, d1Sources s WHERE i.fldLuid=f.fldLuid AND f.srcLuid=s.srcLuid AND i.itmLevel1Name=?");
+		query.append(//
+				"SELECT DISTINCT i.itmGuid,i.itmCrc,i.itmLuid,i.fldLuid,i.itmName,i.itmSize,i.itmDate,i.itmType,i.itmComment,i.itmPreview,i.itmLevel2Name,i.itmLevel3Name " + //
+						"FROM d1Items i, d1Folders f, d1Sources s " + //
+						"WHERE i.fldLuid=f.fldLuid AND f.srcLuid=s.srcLuid AND i.itmLevel1Name=?"//
+		);
 		if (typeFilter != null && typeFilter.length() > 0) {
 			query.append(" AND i.itmType=?");
 		}
@@ -52,13 +53,13 @@ final class RequestGroupsByAlias extends RequestAttachment<RecFileGroup[], Runne
 		query.append(" ORDER BY i.itmName ASC");
 		this.query = query.toString();
 	}
-
+	
 	@Override
 	public final RecFileGroup[] apply(final RunnerDatabaseRequestor ctx) {
-
+		
 		final Map<String, RecFileGroup> lookup = Create.tempMap();
 		final List<RecFileGroup> pending = new ArrayList<>();
-
+		
 		try (final PreparedStatement ps = ctx.ctxGetConnection().prepareStatement(this.query, ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)) {
 			ps.setString(1, this.filter.toLowerCase());
 			if (this.typeFilter != null && this.typeFilter.length() > 0) {
@@ -108,16 +109,16 @@ final class RequestGroupsByAlias extends RequestAttachment<RecFileGroup[], Runne
 		} catch (final SQLException e) {
 			throw new RuntimeException(this.getClass().getSimpleName(), e);
 		}
-
+		
 		final RecFileGroup[] result = pending.toArray(new RecFileGroup[pending.size()]);
 		this.setResult(result);
 		return result;
 	}
-
+	
 	@Override
 	public final String getKey() {
-
+		
 		return this.key;
 	}
-
+	
 }

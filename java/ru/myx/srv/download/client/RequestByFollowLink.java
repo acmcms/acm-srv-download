@@ -13,9 +13,7 @@ import ru.myx.ae3.help.Text;
 import ru.myx.jdbc.queueing.RequestAttachment;
 import ru.myx.jdbc.queueing.RunnerDatabaseRequestor;
 
-/**
- * @author myx
- */
+/** @author myx */
 final class RequestByFollowLink extends RequestAttachment<RecFile[], RunnerDatabaseRequestor> {
 
 	private final DownloadClient parent;
@@ -29,15 +27,17 @@ final class RequestByFollowLink extends RequestAttachment<RecFile[], RunnerDatab
 	private final String query;
 
 	RequestByFollowLink(final DownloadClient parent, final String link, final String typeFilter, final boolean all) {
+
 		this.parent = parent;
 		this.link = link;
 		this.typeFilter = typeFilter;
 		this.key = "fl-" + link + '\n' + typeFilter + '\n' + all;
 		final StringBuilder query = new StringBuilder(256);
-		query.append(
-				"SELECT i.itmGuid,i.itmCrc,i.itmLuid,i.fldLuid,i.itmName,i.itmSize,i.itmDate,i.itmType,i.itmComment,i.itmPreview,i.itmLevel2Name,i.itmLevel3Name "
-						+ "FROM d1Items i, d1ItemLinkage l, d1Folders f, d1Sources s "
-						+ "WHERE i.fldLuid=f.fldLuid AND f.srcLuid=s.srcLuid AND l.itmGuid=i.itmGuid AND l.itmLink=?");
+		query.append( //
+				"SELECT i.itmGuid,i.itmCrc,i.itmLuid,i.fldLuid,i.itmName,i.itmSize,i.itmDate,i.itmType,i.itmComment,i.itmPreview,i.itmLevel2Name,i.itmLevel3Name " + //
+						"FROM d1Items i, d1ItemLinkage l, d1Folders f, d1Sources s " + //
+						"WHERE i.fldLuid=f.fldLuid AND f.srcLuid=s.srcLuid AND l.itmGuid=i.itmGuid AND l.itmLink=?"//
+		);
 		if (typeFilter != null && typeFilter.length() > 0) {
 			query.append(" AND i.itmType=?");
 		}
